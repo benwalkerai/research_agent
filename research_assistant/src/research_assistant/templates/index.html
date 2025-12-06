@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Research Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<div class="app-container">
+    <header class="app-header">
+        <h1>Deep Research Agent</h1>
+        <p>Advanced AI-powered iterative research assistant (Ollama Local)</p>
+    </header>
+
+    <main class="app-grid">
+        <!-- Configuration Panel -->
+        <section class="panel config-panel">
+            <h2><span class="icon">⚙️</span> Configuration</h2>
+            <form id="researchForm">
+                <div class="form-group">
+                    <label for="topic">Research Topic</label>
+                    <input type="text" id="topic" name="topic" placeholder="e.g. Future of AI in Healthcare 2026" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="outputPath">Output Directory (Optional)</label>
+                    <input type="text" id="outputPath" name="outputPath" value="Research" placeholder="Default: Research">
+                </div>
+                <button type="submit" id="startBtn" class="btn-primary">
+                    <span class="btn-text">Start Research</span>
+                    <div class="loader"></div>
+                </button>
+            </form>
+        </section>
+
+        <!-- Status / Terminal Panel -->
+        <section class="panel status-panel">
+            <div class="panel-header">
+                <h2><span class="icon">📟</span> Agent Terminal</h2>
+                <div class="status-badge" id="statusBadge">IDLE</div>
+            </div>
+            <div class="terminal-window" id="terminalWindow">
+                <div class="terminal-content" id="terminalContent">
+                    <span class="log-line system">> System initialized. Waiting for input...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Panel -->
+        <section class="panel results-panel full-width">
+            <div class="panel-header">
+                <h2><span class="icon">📝</span> Research Report</h2>
+                <div class="actions">
+                    <a href="#" id="downloadBtn" class="btn-secondary disabled">Download Report</a>
+                </div>
+            </div>
+            <div class="markdown-viewer" id="markdownViewer">
+                <div class="empty-state">
+                    <p>Report will appear here upon completion.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+strategy_task:
+  description: >
+    Analyze the request regarding {topic}. Identify key themes, questions to answer, and necessary data points.
+    Create a detailed list of search queries and research directives to guide the research team.
+    Consider the current year {current_year} for context.
+    The output must be a valid JSON list of strings, where each string is a specific research topic or query.
+  expected_output: >
+    A JSON list of strings. Example: ["latest advancements in AI 2024", "AI regulatory frameworks", "major LLM providers"]
+  output_file: outputs/strategy.md
+  agent: lead_research_strategist
+
+research_execution_task:
+  description: >
+    Conduct extensive web searches for the specific topic: "{research_topic}".
+    Gather information, statistics, quotes, and recent developments.
+    Ensure you capture source URLs for verification.
+    If you discover important related sub-topics that require separate investigation, list them clearly at the end of your report formatted as a JSON list (e.g., ["Topic 1", "Topic 2"]) within a block labeled 'SUGGESTED_FURTHER_RESEARCH'.
+  expected_output: >
+    A collection of raw research notes, including summaries of findings, data snippets,
+    a list of all visited URLs for "{research_topic}", and a 'SUGGESTED_FURTHER_RESEARCH' block if applicable.
+  async_execution: true
+  agent: senior_researcher
+
+analysis_task:
+  description: >
+    Review the raw research notes. Deduplicate information, resolve any conflicting data points,
+    and organize the findings into logical categories. Verify the facts against the sources provided.
+  expected_output: >
+    A comprehensive 'Fact Brief'. This should be a clean, structured document listing verified facts,
+    key insights, and organized data sections, ready for writing.
+  output_file: outputs/analysis.md
+  agent: research_analyst
+
+content_drafting_task:
+  description: >
+    Using the Fact Brief, write a high-quality, engaging article or report on {topic}.
+    Ensure the narrative flows well, covers all key insights, and is written in a professional tone.
+  expected_output: >
+    A complete draft of the report/article, including Introduction, Body Paragraphs, and Conclusion.
+  output_file: outputs/draft.md
+  agent: content_writer
+
+publishing_task:
+  description: >
+    Take the drafted content and format it into a clean, professional Markdown representation.
+    Add headers, bullet points, and ensure proper citation of sources.
+    Prepare the final text to be saved or emailed.
+  expected_output: >
+    A final, polished Markdown file content, formatted perfectly for publication.
+  output_file: Research/final_research.md
+  agent: publisher
