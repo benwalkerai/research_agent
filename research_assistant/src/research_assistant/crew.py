@@ -4,6 +4,7 @@ from crewai_tools import SerperDevTool
 import os
 import json
 import re
+from research_assistant.memory import CustomCrewMemory  # [NEW]
 
 @CrewBase
 class ResearchAssistant():
@@ -14,22 +15,57 @@ class ResearchAssistant():
 
     def __init__(self):
         # Default LLM
+        self.ollama_base_url = os.getenv("OPENAI_API_BASE", "http://localhost:11434/v1")
+        self.ollama_model_name = os.getenv("OPENAI_MODEL_NAME", "ollama/llama3")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "NA")
+
         self.llm = LLM(
-            model=os.getenv("OPENAI_MODEL_NAME", "ollama/llama3"),
-            base_url=os.getenv("OPENAI_API_BASE", "http://localhost:11434/v1"),
-            api_key=os.getenv("OPENAI_API_KEY", "NA")
+            model=self.ollama_model_name,
+            base_url=self.ollama_base_url,
+            api_key=self.openai_api_key
         )
         
+        # --- Custom Memory Initialization ---
+        self.custom_memory = CustomCrewMemory()
+        
+        # Configure Embeddings for Memory (Internal CrewAI)
+        
         # Configure Embeddings for Memory
-        # Set defaults if not provided in .env
-        if not os.environ.get("EMBEDDINGS_PROVIDER"):
-            os.environ["EMBEDDINGS_PROVIDER"] = "openai"
-        if not os.environ.get("EMBEDDINGS_OLLAMA_MODEL_NAME"):
-            os.environ["EMBEDDINGS_OLLAMA_MODEL_NAME"] = "nomic-embed-text:latest"
-        if not os.environ.get("EMBEDDINGS_OLLAMA_BASE_URL"):
-            os.environ["EMBEDDINGS_OLLAMA_BASE_URL"] = "http://localhost:11434/v1"
-        if not os.environ.get("OPENAI_API_KEY"):
-            os.environ["OPENAI_API_KEY"] = "NA"
+        self.embeddings_provider = os.getenv("EMBEDDINGS_PROVIDER", "ollama") # Default to ollama native
+        self.embeddings_model = os.getenv("EMBEDDINGS_OLLAMA_MODEL_NAME", "nomic-embed-text")
+        
+        # Smart Base URL handling
+        raw_base_url = os.getenv("EMBEDDINGS_OLLAMA_BASE_URL", "http://localhost:11434")
+        
+        if self.embeddings_provider == "ollama":
+             # Native ollama provider typically expects NO /v1 suffix
+             self.embeddings_base_url = raw_base_url.replace("/v1", "")
+        else:
+             # OpenAI compatible provider expects /v1 usually, or uses the same as LLM
+             self.embeddings_base_url = os.getenv("EMBEDDINGS_OLLAMA_BASE_URL", self.ollama_base_url)
+
+        print(f"--- Crew Configuration ---")
+        print(f"LLM Base: {self.ollama_base_url}")
+        print(f"LLM Model: {self.ollama_model_name}")
+        print(f"Embeddings Provider: {self.embeddings_provider}")
+        print(f"Embeddings Model: {self.embeddings_model}")
+        print(f"Embeddings Base: {self.embeddings_base_url}")
+        print(f"--------------------------")
+
+        # Standard Embedder Config
+        self.embedder_config = {
+            "provider": self.embeddings_provider,
+            "config": {
+                "model": self.embeddings_model
+            }
+        }
+        
+        # Add provider-specific keys
+        if self.embeddings_provider == "ollama":
+            self.embedder_config["config"]["base_url"] = self.embeddings_base_url
+        elif self.embeddings_provider == "openai":
+            self.embedder_config["config"]["api_base"] = self.embeddings_base_url
+            self.embedder_config["config"]["api_key"] = self.openai_api_key
 
     def _get_llm(self, model_name_env_var: str):
         """Returns a custom LLM if the env var is set, otherwise returns default."""
@@ -37,8 +73,8 @@ class ResearchAssistant():
         if override_model:
             return LLM(
                 model=override_model,
-                base_url=os.getenv("OPENAI_API_BASE", "http://localhost:11434/v1"),
-                api_key=os.getenv("OPENAI_API_KEY", "NA")
+                base_url=self.ollama_base_url,
+                api_key=self.openai_api_key
             )
         return self.llm
 
@@ -116,33 +152,25 @@ class ResearchAssistant():
         )
 
     # --- Pipelines ---
-    def run_pipeline(self, inputs):
+    def run_pipeline(self, inputs, depth="normal", stop_check=None):
         """
         Orchestrates the dynamic pipeline:
         1. Strategy Phase (Single Task) -> Output: List of topics
         2. Execution Phase (Dynamic Parallel Tasks) -> Output: Research Data
         3. Reporting Phase -> Output: Final Report
         """
-        
+        if stop_check and stop_check(): return "Stopped"
+
         # 1. Strategy Phase
         print("--- Starting Strategy Phase ---")
-        embedder = {
-            "provider": "openai",
-            "config": {
-                "model": "nomic-embed-text:latest",
-                "model_name": "nomic-embed-text:latest",
-                "api_base": "http://localhost:11434/v1",
-                "api_key": "NA"
-            }
-        }
 
         strategy_crew = Crew(
             agents=[self.lead_research_strategist()],
             tasks=[self.strategy_task()],
             process=Process.sequential,
             verbose=True,
-            memory=True,
-            embedder=embedder
+            memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+            embedder=self.embedder_config
         )
         print("\n✨ Passing your request to the Lead Strategist...")
         print("✨ Hang on a sec, they've not had their coffee yet...")
@@ -158,6 +186,25 @@ class ResearchAssistant():
                 raw = raw.split("```")[1].split("```")[0].strip()
                 
             topics = json.loads(raw)
+            
+            # [Optimization] Limit topics based on depth to control speed
+            topic_limits = {
+                "fast": 5,
+                "normal": 10,
+                "deep": 20
+            }
+            limit = topic_limits.get(depth, 10)
+            if len(topics) > limit:
+                print(f"⚠️ Limit applied: Truncating {len(topics)} topics to {limit} for '{depth}' mode.")
+                topics = topics[:limit]
+            
+            # [NEW] Memory: Save Strategy Output
+            self.custom_memory.save(
+                value=f"Strategy Plan for '{inputs['topic']}': {topics}", 
+                metadata={"type": "strategy", "topic": inputs['topic']}, 
+                agent="Lead Strategist"
+            )
+
         except Exception as e:
              print(f"Error parsing strategy output: {e}\nOutput was: {strategy_output}")
              topics = [inputs['topic']] # Fallback
@@ -173,23 +220,36 @@ class ResearchAssistant():
         researched_topics = set(topics)
         all_research_outputs = []
         
-        # Max iterations for the feedback loop
-        max_iterations = 3
+        # Max iterations based on depth
+        depth_map = {
+            "fast": 1,
+            "normal": 3,
+            "deep": 5
+        }
+        max_iterations = depth_map.get(depth, 3)
         current_iteration = 0
         
         # Initial batch
         current_batch_topics = topics
         
         while current_batch_topics and current_iteration < max_iterations:
+            if stop_check and stop_check():
+                print("🛑 Stop signal detected. Breaking research loop.")
+                break
+
             print(f"--- Research Iteration {current_iteration + 1} with topics: {current_batch_topics} ---")
             
             research_tasks = []
             researcher = self.senior_researcher()
             
             for topic in current_batch_topics:
+                # [NEW] Memory: Check for existing knowledge
+                context_found = self.custom_memory.search(topic, limit=1)
+                context_str = f"\nRelevant past knowledge: {context_found}" if context_found else ""
+
                 # Create a dedicated task for each topic
                 task_config = self.tasks_config['research_execution_task'].copy()
-                task_config['description'] = task_config['description'].replace('{research_topic}', topic)
+                task_config['description'] = task_config['description'].replace('{research_topic}', topic) + context_str
                 task_config['expected_output'] = task_config['expected_output'].replace('{research_topic}', topic)
                 
                 safe_topic = re.sub(r'[^a-zA-Z0-9]', '_', topic)[:50].lower()
@@ -210,13 +270,20 @@ class ResearchAssistant():
                 tasks=research_tasks,
                 process=Process.sequential,
                 verbose=True,
-                memory=True,
-                embedder=embedder
+                memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+                embedder=self.embedder_config
             )
             
             # Execute current batch
             batch_output = research_crew.kickoff()
             all_research_outputs.append(str(batch_output))
+            
+            # [NEW] Memory: Save Research Output
+            self.custom_memory.save(
+                value=f"Research Findings on '{current_batch_topics}': {str(batch_output)[:500]}...", # Truncate for embedding
+                metadata={"type": "research", "iteration": current_iteration},
+                agent="Senior Researcher"
+            )
             
             # Extract new topics for next iteration
             new_topics = []
@@ -235,6 +302,15 @@ class ResearchAssistant():
                                 if s not in researched_topics:
                                     new_topics.append(s)
                                     researched_topics.add(s)
+                            
+                            # [NEW] Memory: Save discovered links
+                            if new_topics:
+                                self.custom_memory.save(
+                                    value=f"Discovered new research paths from {current_batch_topics}: {new_topics}",
+                                    metadata={"type": "discovery", "parent_topics": current_batch_topics},
+                                    agent="Senior Researcher"
+                                )
+
                         except Exception as e:
                             print(f"Failed to parse suggestions: {e}")
             
@@ -260,23 +336,13 @@ class ResearchAssistant():
         t_drafting = self.content_drafting_task()
         t_publishing = self.publishing_task()
         
-        embedder = {
-            "provider": "openai",
-            "config": {
-                "model": "nomic-embed-text",
-                "model_name": "nomic-embed-text",
-                "api_base": "http://localhost:11434/v1",
-                "api_key": "NA"
-            }
-        }
-        
         reporting_crew = Crew(
-            agents=[self.research_analyst(), self.content_writer(), self.publisher()],
-            tasks=[t_analysis, t_drafting, t_publishing],
-            process=Process.sequential,
-            verbose=True,
-            memory=True,
-            embedder=embedder
+                agents=[self.research_analyst(), self.content_writer(), self.publisher()],
+                tasks=[t_analysis, t_drafting, t_publishing],
+                process=Process.sequential,
+                verbose=True,
+                memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+                embedder=self.embedder_config
         )
         
         result = reporting_crew.kickoff(inputs=reporting_inputs)
@@ -284,20 +350,11 @@ class ResearchAssistant():
 
     @crew
     def crew(self) -> Crew:
-        embedder = {
-            "provider": "openai",
-            "config": {
-                "model": "nomic-embed-text",
-                "model_name": "nomic-embed-text",
-                "api_base": "http://localhost:11434/v1",
-                "api_key": "NA"
-            }
-        }
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            memory=True,
-            embedder=embedder
+            memory=False,
+            embedder=self.embedder_config
         )

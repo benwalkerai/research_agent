@@ -8,7 +8,10 @@ dependencies = [
     "crewai[tools]==1.5.0",
     "litellm",
     "ollama",
-    "flask"
+    "flask",
+    "markdown2>=2.5.4",
+    "chromadb>=1.1.1",
+    "neo4j>=6.0.3",
 ]
 
 [project.scripts]

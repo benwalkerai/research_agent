@@ -1,39 +1,17 @@
-**
-```json
-{
-  "research_topics_and_queries": [
-    // Technological Advancements & Emerging Fields
-    "Emerging AI subfields expected to gain traction by Q1 2026 (e.g., AutoML, Meta-Learning, Causal AI)",
-    "Advancements in LLM architectures expected between 2025-2026 (e.g., Transformer-XL, Perceiver, Long Short-Term Memory)",
-    "Innovative techniques for improving LLM performance and efficiency by Q1 2026 (e.g., Knowledge Distillation, Prompt Tuning)",
-    "Potential impact of quantum computing on AI and LLMs by early 2026",
-    "Emerging technologies in AI engineering by Q1 2026",
-
-    // Applications & Industry Verticals
-    "Potential applications of LLMs in industry verticals (e.g., Finance, Healthcare, Education) by early 2026",
-    "LLM integration with other AI technologies: Reinforcement Learning, Evolutionary Algorithms, etc. by early 2026",
-    "Advancements in multi-modal learning for LLMs, integrating vision, audio, and text data by early 2026",
-
-    // Ethics & Regulations
-    "Ethical considerations and challenges in LLM development and deployment by Q1 2026",
-    "AI and LLM regulatory landscapes: Global trends and key developments by early 2026",
-    "The role of AI regulations (e.g., EU's AI Act, US federal-level AI regulations) on employment trends",
-
-    // Market & Employment Trends
-    "Market projections for AI and LLM services, platforms, and tools by early 2026",
-    "AI Engineer job market size projection for early 2026",
-    "Growing and shrinking sectors of AI employment in 2026",
-    "Top cities and regions with high AI Engineer job growth in early 2026",
-    "Skills required and most valued by employers for AI Engineers in early 2026",
-    "AI hiring trends in tech companies by Q1 2026",
-    "Market demands for AI engineers in different sectors (e.g., Tech, Finance, Healthcare) in early 2026",
-    "Top AI engineering roles expected to grow in 2026",
-    "Most effective channels and strategies to find AI Engineer jobs in early 2026 (e.g., job boards, networking, referrals)",
-    "Common interview questions, case studies, and projects required for AI Engineer roles by early 2026",
-
-    // Employment & Career Development
-    "AI certifications and online courses with high job placement rates in early 2026",
-    "Successful AI Engineer career transition stories from other fields in 2025-2026"
-  ]
-}
-```
+[
+  "AI job market size projection: 2025 vs 2026",
+  "Emerging AI subfields expected to grow by 2026 (e.g., explainable AI, quantum machine learning)",
+  "In-demand AI skills in 2025 and their projected evolution by 2026",
+  "New AI job roles and titles expected to emerge between 2025 and 2026",
+  "AI job market growth: comparison of key regions (e.g., North America, Europe, Asia)",
+  "Top AI talent hubs in 2025 and their projection for 2026",
+  "Potential impact of AI regulations on the job market by 2026 (e.g., EU's AI Act, US's Algorithmic Accountability Act)",
+  "AI workforce diversity: current state (2025) and expected changes by 2026",
+  "Upskilling and reskilling needs for the AI workforce between 2025 and 2026",
+  "Emerging AI technologies' impact on job roles transformation by 2026 (e.g., generative models, MLOps)",
+  "AI job market in 2026: industry-specific analysis (e.g., tech, healthcare, finance)",
+  "Potential AI-related crises and their impact on the job market by 2026 (e.g., AI winters, job displacement)",
+  "Collaborative AI jobs growth projection between 2025 and 2026 (e.g., human-AI collaboration, co-creation)",
+  "AI education landscape: current programs (2025) and their evolution by 2026",
+  "Top AI conferences and events in 2026 and their relevance to the job market"
+]

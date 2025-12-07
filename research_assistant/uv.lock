@@ -1518,6 +1518,15 @@ wheels = [
 ]
 
 [[package]]
+name = "markdown2"
+version = "2.5.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/f8/b2ae8bf5f28f9b510ae097415e6e4cb63226bb28d7ee01aec03a755ba03b/markdown2-2.5.4.tar.gz", hash = "sha256:a09873f0b3c23dbfae589b0080587df52ad75bb09a5fa6559147554736676889", size = 145652, upload-time = "2025-07-27T16:16:24.307Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/06/2697b5043c3ecb720ce0d243fc7cf5024c0b5b1e450506e9b21939019963/markdown2-2.5.4-py3-none-any.whl", hash = "sha256:3c4b2934e677be7fec0e6f2de4410e116681f4ad50ec8e5ba7557be506d3f439", size = 49954, upload-time = "2025-07-27T16:16:23.026Z" },
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1800,6 +1809,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/80/9b174a92814a3830b7357307a792300f42c9e94664b01dee8e457551fa66/multidict-6.7.0-cp313-cp313t-win_amd64.whl", hash = "sha256:3da4fb467498df97e986af166b12d01f05d2e04f978a9c1c680ea1988e0bc4b6", size = 53104, upload-time = "2025-10-06T14:50:48.851Z" },
     { url = "https://files.pythonhosted.org/packages/cc/28/04baeaf0428d95bb7a7bea0e691ba2f31394338ba424fb0679a9ed0f4c09/multidict-6.7.0-cp313-cp313t-win_arm64.whl", hash = "sha256:b4121773c49a0776461f4a904cdf6264c88e42218aaa8407e803ca8025872792", size = 45503, upload-time = "2025-10-06T14:50:50.16Z" },
     { url = "https://files.pythonhosted.org/packages/b7/da/7d22601b625e241d4f23ef1ebff8acfc60da633c9e7e7922e24d10f592b3/multidict-6.7.0-py3-none-any.whl", hash = "sha256:394fc5c42a333c9ffc3e421a4c85e08580d990e08b99f6bf35b4132114c5dcb3", size = 12317, upload-time = "2025-10-06T14:52:29.272Z" },
+]
+
+[[package]]
+name = "neo4j"
+version = "6.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/60/b2/87534fc0520e5f9db1432bacc3f8d0ce024608010babc4f65b96e0c34906/neo4j-6.0.3.tar.gz", hash = "sha256:7fb79e166e281aafd67d521f6611763ebcdc529f26db506c5605f91ddcd825ea", size = 239653, upload-time = "2025-11-06T16:57:57.012Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/fe/55ed1d4636defb57fae1f7be7818820aa8071d45949c91ef8649930e70c5/neo4j-6.0.3-py3-none-any.whl", hash = "sha256:a92023854da96aed4270e0d03d6429cdd7f0d3335eae977370934f4732de5678", size = 325433, upload-time = "2025-11-06T16:57:55.03Z" },
 ]
 
 [[package]]
@@ -2920,6 +2941,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2025.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/bf/abbd3cdfb8fbc7fb3d4d38d320f2441b1e7cbe29be4f23797b4a2b5d8aac/pytz-2025.2.tar.gz", hash = "sha256:360b9e3dbb49a209c21ad61809c7fb453643e048b38924c765813546746e81c3", size = 320884, upload-time = "2025-03-25T02:25:00.538Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/c4/34e93fe5f5429d7570ec1fa436f1986fb1f00c3e0f43a589fe2bbcd22c3f/pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00", size = 509225, upload-time = "2025-03-25T02:24:58.468Z" },
+]
+
+[[package]]
 name = "pywin32"
 version = "311"
 source = { registry = "https://pypi.org/simple" }
@@ -3110,17 +3140,23 @@ name = "research-assistant"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "chromadb" },
     { name = "crewai", extra = ["tools"] },
     { name = "flask" },
     { name = "litellm" },
+    { name = "markdown2" },
+    { name = "neo4j" },
     { name = "ollama" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "chromadb", specifier = ">=1.1.1" },
     { name = "crewai", extras = ["tools"], specifier = "==1.5.0" },
     { name = "flask" },
     { name = "litellm" },
+    { name = "markdown2", specifier = ">=2.5.4" },
+    { name = "neo4j", specifier = ">=6.0.3" },
     { name = "ollama" },
 ]
 
