@@ -103,9 +103,18 @@ def run_research_background(topic, output_dir, depth="normal"):
                  latest_research_output = result.raw
              else:
                  latest_research_output = str(result)
-             default_path = os.path.join(output_dir, "final_research.md")
-             output_file_path = os.path.abspath(default_path)
-             with open(default_path, 'w', encoding='utf-8') as f:
+             
+             # Generate unique filename from topic and timestamp
+             import re
+             from datetime import datetime
+             safe_topic = re.sub(r'[^\w\s-]', '', topic).strip()[:50]  # Remove special chars, limit length
+             safe_topic = re.sub(r'[-\s]+', '_', safe_topic).lower()   # Replace spaces/dashes with underscores
+             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+             filename = f"research_{safe_topic}_{timestamp}.md"
+             
+             output_path = os.path.join(output_dir, filename)
+             output_file_path = os.path.abspath(output_path)
+             with open(output_path, 'w', encoding='utf-8') as f:
                  f.write(latest_research_output)
              print(f"\n✅ Research completed! Output saved to: {output_file_path}")
         
@@ -276,7 +285,26 @@ def get_result_fragment():
     else:
         return "..." # Keep waiting
 
-# ... existing download routes ...
+@app.route('/api/download-report')
+def download_report():
+    """Download the generated research report as a markdown file."""
+    global output_file_path, job_status
+    
+    if job_status != "COMPLETED":
+        return jsonify({"error": "No completed research available"}), 404
+    
+    if not output_file_path or not os.path.exists(output_file_path):
+        return jsonify({"error": "Report file not found"}), 404
+    
+    try:
+        return send_file(
+            output_file_path,
+            as_attachment=True,
+            download_name='research_report.md',
+            mimetype='text/markdown'
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to download file: {str(e)}"}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Research Agent on http://localhost:5000")

@@ -1,6 +1,6 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import SerperDevTool
+from research_assistant.tools.serper_tool import SerperSearchToolWithRetry
 import os
 import json
 import re
@@ -91,7 +91,7 @@ class ResearchAssistant():
     def senior_researcher(self) -> Agent:
         return Agent(
             config=self.agents_config['senior_researcher'],
-            tools=[SerperDevTool()],
+            tools=[SerperSearchToolWithRetry()],
             llm=self._get_llm("RESEARCHER_MODEL"),
             verbose=True
         )

@@ -369,7 +369,9 @@ h2 {
     flex: 1;
     padding: 40px;
     overflow-y: auto;
+    overflow: hidden;
     scroll-behavior: smooth;
+    position: relative;
 }
 
 .citation-rail {
@@ -509,31 +511,124 @@ h2 {
 }
 
 /* Markdown Styles */
+.markdown-viewer {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    color: #cbd5e1;
+    line-height: 1.7;
+    position: relative;
+}
+
 .markdown-viewer h1 {
     font-size: 2rem;
     color: white;
     margin-bottom: 0.8em;
+    margin-top: 0.5em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.3em;
+    font-weight: 700;
 }
 
 .markdown-viewer h2 {
     color: var(--text-primary);
     margin-top: 1.5em;
+    margin-bottom: 0.6em;
     font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.markdown-viewer h3 {
+    color: var(--text-primary);
+    margin-top: 1.3em;
+    margin-bottom: 0.5em;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.markdown-viewer h4 {
+    color: var(--text-primary);
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.markdown-viewer h5,
+.markdown-viewer h6 {
+    color: var(--text-primary);
+    margin-top: 1em;
+    margin-bottom: 0.4em;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .markdown-viewer p {
     margin-bottom: 1.2em;
+    margin-top: 0;
     color: #cbd5e1;
     font-size: 1rem;
     line-height: 1.7;
+}
+
+.markdown-viewer ul,
+.markdown-viewer ol {
+    margin-bottom: 1.2em;
+    margin-top: 0.5em;
+    padding-left: 2em;
+    color: #cbd5e1;
+}
+
+.markdown-viewer ul {
+    list-style-type: disc;
+}
+
+.markdown-viewer ol {
+    list-style-type: decimal;
+}
+
+.markdown-viewer li {
+    margin-bottom: 0.5em;
+    line-height: 1.7;
+}
+
+.markdown-viewer li>p {
+    margin-bottom: 0.5em;
+}
+
+.markdown-viewer ul ul,
+.markdown-viewer ol ul {
+    list-style-type: circle;
+    margin-top: 0.5em;
+}
+
+.markdown-viewer ul ul ul,
+.markdown-viewer ol ul ul {
+    list-style-type: square;
 }
 
 .markdown-viewer a {
     color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 2px;
+    transition: color 0.2s;
+}
+
+.markdown-viewer a:hover {
+    color: var(--accent-hover);
+}
+
+.markdown-viewer strong,
+.markdown-viewer b {
+    color: white;
+    font-weight: 600;
+}
+
+.markdown-viewer em,
+.markdown-viewer i {
+    font-style: italic;
+    color: #e2e8f0;
 }
 
 .markdown-viewer blockquote {
@@ -541,6 +636,7 @@ h2 {
     background: rgba(99, 102, 241, 0.05);
     padding: 1em;
     margin: 1.5em 0;
+    color: #cbd5e1;
 }
 
 .markdown-viewer pre {
@@ -550,6 +646,7 @@ h2 {
     overflow-x: auto;
     border: 1px solid rgba(255, 255, 255, 0.1);
     font-family: var(--font-mono);
+    margin: 1.2em 0;
 }
 
 .markdown-viewer code {
@@ -558,6 +655,42 @@ h2 {
     background: rgba(6, 182, 212, 0.1);
     padding: 2px 5px;
     border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.markdown-viewer pre code {
+    background: transparent;
+    padding: 0;
+    color: #94e2d5;
+}
+
+.markdown-viewer hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 2em 0;
+}
+
+.markdown-viewer table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5em 0;
+}
+
+.markdown-viewer th,
+.markdown-viewer td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75em;
+    text-align: left;
+}
+
+.markdown-viewer th {
+    background: rgba(99, 102, 241, 0.1);
+    color: white;
+    font-weight: 600;
+}
+
+.markdown-viewer tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
 }
 
 /* Form Group in Config */
@@ -818,4 +951,153 @@ input[type="range"]::-webkit-slider-thumb {
     .hero-title {
         font-size: 1.8rem;
     }
+}
+
+/* Neural Network Animation */
+.neural-network {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0f1a 0%, #0d1525 50%, #0a0f1a 100%);
+    overflow: hidden;
+    z-index: 10;
+}
+
+.neural-network svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.neural-node {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.9), rgba(6, 182, 212, 0.6));
+    box-shadow:
+        0 0 10px rgba(99, 102, 241, 0.5),
+        0 0 20px rgba(99, 102, 241, 0.3),
+        0 0 30px rgba(6, 182, 212, 0.2);
+    animation: node-pulse 2s ease-in-out infinite;
+    will-change: transform, opacity;
+}
+
+.neural-node::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40%;
+    height: 40%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    filter: blur(2px);
+}
+
+.neural-node.large {
+    width: 16px;
+    height: 16px;
+}
+
+.neural-node.medium {
+    width: 10px;
+    height: 10px;
+}
+
+.neural-node.small {
+    width: 6px;
+    height: 6px;
+    opacity: 0.7;
+}
+
+.neural-connection {
+    stroke: url(#connectionGradient);
+    stroke-width: 1;
+    fill: none;
+    opacity: 0.4;
+    stroke-dasharray: 5, 5;
+    animation: connection-flow 2s linear infinite;
+}
+
+.neural-connection.strong {
+    stroke-width: 1.5;
+    opacity: 0.6;
+}
+
+.data-particle {
+    fill: rgba(6, 182, 212, 0.9);
+    filter: drop-shadow(0 0 3px rgba(6, 182, 212, 0.8));
+}
+
+.data-pulse {
+    fill: rgba(34, 211, 238, 1);
+    filter: drop-shadow(0 0 6px rgba(6, 182, 212, 1));
+}
+
+@keyframes node-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+@keyframes connection-flow {
+    0% {
+        stroke-dashoffset: 0;
+    }
+
+    100% {
+        stroke-dashoffset: -20;
+    }
+}
+
+@keyframes particle-move {
+    0% {
+        offset-distance: 0%;
+        opacity: 1;
+    }
+
+    100% {
+        offset-distance: 100%;
+        opacity: 0;
+    }
+}
+
+/* AI Thinking Effects */
+.neural-node.thinking {
+    background: radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 1), rgba(99, 102, 241, 0.9)) !important;
+    box-shadow:
+        0 0 15px rgba(34, 211, 238, 0.9),
+        0 0 30px rgba(34, 211, 238, 0.6),
+        0 0 45px rgba(99, 102, 241, 0.4) !important;
+    transform: scale(1.4);
+    transition: all 0.1s ease-out;
+}
+
+.neural-node.burst {
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(34, 211, 238, 1)) !important;
+    box-shadow:
+        0 0 20px rgba(255, 255, 255, 0.8),
+        0 0 40px rgba(34, 211, 238, 0.7),
+        0 0 60px rgba(99, 102, 241, 0.5) !important;
+    transform: scale(1.8);
+    transition: all 0.15s ease-out;
+}
+
+.neural-connection.firing {
+    stroke: rgba(34, 211, 238, 1) !important;
+    stroke-width: 3 !important;
+    opacity: 1 !important;
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.8));
 }

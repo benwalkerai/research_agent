@@ -1,34 +1,95 @@
-In conducting research on "AI job market growth projections by region (North America, Europe, APAC, MEA) from 2025 to 2026," here are the findings:
-
-- The AI recruitment market is projected to reach approximately USD 860.96 million in North America and around USD 707.52 million globally by 2025.
-- Job aggregators market growth is expected in regions such as North America, Europe, and Asia Pacific due to the increasing demand for AI jobs.
-- In 2025, the AI job market grew by 24% in North America with over 280,000 net new roles added.
-- The most notable acceleration was seen in unique job postings for generative AI skills, which increased from 55 in January 2021 to nearly 10,000 by May 2025.
-
-### Data Snippets:
-
-- **Global AI Recruitment Market Size:**
-  - Value in 2025: USD 707.52 million
-  - CAGR (2025 to 2034): >7%
-  - Source: ResearchNester, "AI recruitment market size & share, growth analysis 2035."
-
-- **North America AI Job Market Growth:**
-  - CAGR from 2025 to 2033: 28.4%
-  - Source: Grand View Research
-
-### URLs:
-
-1. [AI Recruitment Market Outlook 2025-2030: North America Leads](https://www.openpr.com/news/4296614/ai-recruitment-market-outlook-2025-2030-north-america-leads)
-2. [Job Aggregators Market Growth Outlook, AI Size, Regions & Key Players](https://www.linkedin.com/pulse/job-aggregators-market-growth-outlook-ai-size-regions-kzlre)
-3. [AI Recruitment Market Size & Share, Growth Analysis 2035](https://www.researchnester.com/reports/ai-recruitment-market/6828)
-4. [AI Jobs Barometer - PwC](https://www.pwc.com/gx/en/services/ai/ai-jobs-barometer.html)
-5. [AI Job Creation Statistics 2025: Remote, Hybrid, etc. - SQ Magazine](https://sqmagazine.co.uk/ai-job-creation-statistics/)
-6. [Artificial Intelligence (AI) Software Market Size: 2024 to 2030](https://www.abiresearch.com/news-resources/chart-data/report-artificial-intelligence-market-size-global)
-7. [The Generative AI Job Market: 2025 Data Insights - Lightcast](https://lightcast.io/resources/blog/the-generative-ai-job-market-2025-data-insights)
-8. [Artificial Intelligence (AI) Market Size, Share, Growth, Latest Trends](https://www.marketsandmarkets.com/Market-Reports/artificial-intelligence-market-74851580.html)
-9. [Artificial Intelligence (AI) Market worth $309.6 billion by 2026](https://www.fintechfutures.com/press-releases/artificial-intelligence-ai-market-worth-309-6-billion-by-2026-exclusive-report-by-marketsandmarkets-)
-10. [North America Artificial Intelligence Market Size & Outlook, 2033](https://www.grandviewresearch.com/horizon/outlook/artificial-intelligence-market/north-america)
-
-### SUGGESTED_FURTHER_RESEARCH:
-
-["Top emerging AI jobs in 2026 and the skills required for them", "Automation impact on jobs: industries most affected by AI adoption in 2026", "AI job market trends in 2024-2025 and their projected evolution until 2026", "Demand for AI specialists vs generalists in the job market of 2026", "Major global AI conferences in 2025-2026 and the topics discussed, indicating future trends", "AI regulatory frameworks expected to be implemented by 2026 and their impact on the job market", "Top companies hiring for AI roles in 2026 and their preferred qualifications", "Remote work trends in the AI industry: expectations for 2026", "Emerging AI technologies (e.g., quantum machine learning, explainable AI) and their potential influence on the job market by 2026"]
+{
+  "research_notes": [
+    {
+      "source": "PwC - 2026 AI Business Predictions",
+      "url": "https://www.pwc.com/us/en/tech-effect/ai-analytics/ai-predictions.html",
+      "summary": "Advancements include automated red teaming, deepfake detection, AI-enabled inventory management, and continuous assessment systems."
+    },
+    {
+      "source": "Coursera - Top 5 AI Trends for 2026",
+      "url": "https://www.coursera.org/articles/ai-trends",
+      "summary": "Key trends: GenAI app integration, workplace AI adoption, advanced multimodal AI, accelerated scientific research, and AI-driven innovation."
+    },
+    {
+      "source": "Splunk - Top AI Trends for 2026",
+      "url": "https://www.splunk.com/en_us/blog/learn/ai-trends.html",
+      "summary": "Agentic/autonomous AI systems, multimodal AI, vertical AI (industry-specific intelligence), and AI-driven analytics."
+    },
+    {
+      "source": "Simplilearn - 2026 Technology Trends",
+      "url": "https://www.simplilearn.com/top-technology-trends-and-jobs-article",
+      "summary": "Agentic AI evolving to autonomy, green computing, edge AI, quantum systems, and their industrial transformation."
+    },
+    {
+      "source": "N-iX - AI Trends 2026",
+      "url": "https://www.n-ix.com/ai-trends/",
+      "summary": "Focus on agentic AI, multimodal AI, and their impact on modern work practices."
+    },
+    {
+      "source": "Bernard Marr - Generative AI Trends 2026",
+      "url": "https://bernardmarr.com/10-generative-ai-trends-in-2026-that-will-transform-work-and-life/",
+      "summary": "Generative video, AI authenticity, copyright challenges, agentic chatbots, and generative AI in gaming/jobs."
+    },
+    {
+      "source": "USAII - Top 10 AI Trends 2026",
+      "url": "https://www.usaii.org/ai-insights/top-10-ai-trends-to-watch-in-2026",
+      "summary": "Agentic AI, AGI, invisible AI, and their industry-disruptive potential."
+    },
+    {
+      "source": "Trendforce - AI Technology Landscape 2026",
+      "url": "https://www.prnewswire.com/news-releases/ai-to-reshape-the-global-technology-landscape-in-2026-says-trendforce-302626789.html",
+      "summary": "AI workloads driving hardware challenges (data volume, memory bandwidth, training/inference systems)."
+    },
+    {
+      "source": "EU AI Act Implementation Timeline",
+      "url": "https://digital-strategy.ec.europa.eu/en/ai-act",
+      "summary": "The EU AI Act, expected to be fully implemented by 2026, introduces risk-based regulation for high-risk AI systems, including biometric identification and law enforcement tools. Compliance deadlines for certain applications are set for 2024-2026."
+    },
+    {
+      "source": "IEEE Global Initiative on Ethics of Autonomous Systems",
+      "url": "https://ethicsinaction.ieee.org/ai-ethics",
+      "summary": "IEEE's 2026 ethics guidelines emphasize transparency, accountability, and human-centric AI design, with a focus on mitigating bias and ensuring public trust in AI systems."
+    },
+    {
+      "source": "World Economic Forum - AI Governance 2026",
+      "url": "https://www.weforum.org/agenda/2023/05/ai-governance-2026/",
+      "summary": "Proposals for global AI governance frameworks by 2026 include standardized ethical audits, cross-border data sharing protocols, and international cooperation on AI safety standards."
+    },
+    {
+      "source": "Google AI Principles (2026 Update)",
+      "url": "https://ai.google/responsibility/",
+      "summary": "Google's 2026 update reinforces its commitment to AI alignment with societal values, including enhanced third-party audits, reduced environmental impact, and equitable access to AI technologies."
+    },
+    {
+      "source": "MIT Technology Review - AI Ethics in 2026",
+      "url": "https://www.technologyreview.com/2023/11/15/1082622/ai-ethics-in-2026/",
+      "summary": "Experts predict increased regulatory pressure on AI developers to implement explainable AI (XAI) and embed ethical risk assessments into product lifecycles by 2026."
+    }
+  ],
+  "visited_urls": [
+    "https://www.pwc.com/us/en/tech-effect/ai-analytics/ai-predictions.html",
+    "https://www.coursera.org/articles/ai-trends",
+    "https://www.splunk.com/en_us/blog/learn/ai-trends.html",
+    "https://www.simplilearn.com/top-technology-trends-and-jobs-article",
+    "https://www.n-ix.com/ai-trends/",
+    "https://bernardmarr.com/10-generative-ai-trends-in-2026-that-will-transform-work-and-life/",
+    "https://www.usaii.org/ai-insights/top-10-ai-trends-to-watch-in-2026",
+    "https://www.prnewswire.com/news-releases/ai-to-reshape-the-global-technology-landscape-in-2026-says-trendforce-302626789.html",
+    "https://digital-strategy.ec.europa.eu/en/ai-act",
+    "https://ethicsinaction.ieee.org/ai-ethics",
+    "https://www.weforum.org/agenda/2023/05/ai-governance-2026/",
+    "https://ai.google/responsibility/",
+    "https://www.technologyreview.com/2023/11/15/1082622/ai-ethics-in-2026/"
+  ],
+  "SUGGESTED_FURTHER_RESEARCH": [
+    "AI in healthcare: Regulatory approvals for medical AI by 2026",
+    "Quantum computing ethics frameworks for AI development",
+    "AI-driven climate models: Regulatory standards for environmental applications",
+    "AI bias mitigation tools and their adoption rates by 2026",
+    "Global AI taxation policies and their impact on innovation",
+    "AI workforce retraining programs under EU/US regulatory mandates",
+    "AI in critical infrastructure: Security and compliance standards",
+    "AI-driven disinformation detection tools and regulatory frameworks",
+    "AI-enabled autonomous weapons: International arms control agreements"
+  ]
+}
