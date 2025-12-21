@@ -1,10 +1,9 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
-from research_assistant.tools.serper_tool import SerperSearchToolWithRetry
+from research_assistant.tools.ddg_tool import DuckDuckGoSearchTool
 import os
 import json
 import re
-from research_assistant.memory import CustomCrewMemory  # [NEW]
 
 @CrewBase
 class ResearchAssistant():
@@ -25,10 +24,8 @@ class ResearchAssistant():
             api_key=self.openai_api_key
         )
         
-        # --- Custom Memory Initialization ---
-        self.custom_memory = CustomCrewMemory()
-        
-        # Configure Embeddings for Memory (Internal CrewAI)
+        # --- Native Memory Configuration ---
+        # Configure Embeddings for Memory
         
         # Configure Embeddings for Memory
         self.embeddings_provider = os.getenv("EMBEDDINGS_PROVIDER", "ollama") # Default to ollama native
@@ -91,9 +88,10 @@ class ResearchAssistant():
     def senior_researcher(self) -> Agent:
         return Agent(
             config=self.agents_config['senior_researcher'],
-            tools=[SerperSearchToolWithRetry()],
+            tools=[DuckDuckGoSearchTool()],
             llm=self._get_llm("RESEARCHER_MODEL"),
-            verbose=True
+            verbose=True,
+            memory=True
         )
 
     @agent
@@ -169,7 +167,7 @@ class ResearchAssistant():
             tasks=[self.strategy_task()],
             process=Process.sequential,
             verbose=True,
-            memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+            memory=True, 
             embedder=self.embedder_config
         )
         print("\n✨ Passing your request to the Lead Strategist...")
@@ -198,12 +196,9 @@ class ResearchAssistant():
                 print(f"⚠️ Limit applied: Truncating {len(topics)} topics to {limit} for '{depth}' mode.")
                 topics = topics[:limit]
             
-            # [NEW] Memory: Save Strategy Output
-            self.custom_memory.save(
-                value=f"Strategy Plan for '{inputs['topic']}': {topics}", 
-                metadata={"type": "strategy", "topic": inputs['topic']}, 
-                agent="Lead Strategist"
-            )
+            topics = json.loads(raw)
+            
+            # [Optimization] Limit topics based on depth to control speed
 
         except Exception as e:
              print(f"Error parsing strategy output: {e}\nOutput was: {strategy_output}")
@@ -243,13 +238,9 @@ class ResearchAssistant():
             researcher = self.senior_researcher()
             
             for topic in current_batch_topics:
-                # [NEW] Memory: Check for existing knowledge
-                context_found = self.custom_memory.search(topic, limit=1)
-                context_str = f"\nRelevant past knowledge: {context_found}" if context_found else ""
-
                 # Create a dedicated task for each topic
                 task_config = self.tasks_config['research_execution_task'].copy()
-                task_config['description'] = task_config['description'].replace('{research_topic}', topic) + context_str
+                task_config['description'] = task_config['description'].replace('{research_topic}', topic)
                 task_config['expected_output'] = task_config['expected_output'].replace('{research_topic}', topic)
                 
                 safe_topic = re.sub(r'[^a-zA-Z0-9]', '_', topic)[:50].lower()
@@ -270,20 +261,13 @@ class ResearchAssistant():
                 tasks=research_tasks,
                 process=Process.sequential,
                 verbose=True,
-                memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+                memory=True,
                 embedder=self.embedder_config
             )
             
             # Execute current batch
             batch_output = research_crew.kickoff()
             all_research_outputs.append(str(batch_output))
-            
-            # [NEW] Memory: Save Research Output
-            self.custom_memory.save(
-                value=f"Research Findings on '{current_batch_topics}': {str(batch_output)[:500]}...", # Truncate for embedding
-                metadata={"type": "research", "iteration": current_iteration},
-                agent="Senior Researcher"
-            )
             
             # Extract new topics for next iteration
             new_topics = []
@@ -302,14 +286,6 @@ class ResearchAssistant():
                                 if s not in researched_topics:
                                     new_topics.append(s)
                                     researched_topics.add(s)
-                            
-                            # [NEW] Memory: Save discovered links
-                            if new_topics:
-                                self.custom_memory.save(
-                                    value=f"Discovered new research paths from {current_batch_topics}: {new_topics}",
-                                    metadata={"type": "discovery", "parent_topics": current_batch_topics},
-                                    agent="Senior Researcher"
-                                )
 
                         except Exception as e:
                             print(f"Failed to parse suggestions: {e}")
@@ -341,7 +317,7 @@ class ResearchAssistant():
                 tasks=[t_analysis, t_drafting, t_publishing],
                 process=Process.sequential,
                 verbose=True,
-                memory=False, # DISABLED temporarily to fix Embedding Conflict (OpenAI vs Ollama)
+                memory=True,
                 embedder=self.embedder_config
         )
         
@@ -355,6 +331,6 @@ class ResearchAssistant():
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            memory=False,
+            memory=True,
             embedder=self.embedder_config
         )
