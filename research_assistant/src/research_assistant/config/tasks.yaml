@@ -16,8 +16,10 @@ research_execution_task:
     Ensure you capture source URLs for verification.
     If you discover important related sub-topics that require separate investigation, list them clearly at the end of your report formatted as a JSON list (e.g., ["Topic 1", "Topic 2"]) within a block labeled 'SUGGESTED_FURTHER_RESEARCH'.
   expected_output: >
-    A collection of raw research notes, including summaries of findings, data snippets,
-    a list of all visited URLs for "{research_topic}", and a 'SUGGESTED_FURTHER_RESEARCH' block if applicable.
+    A concise collection of high-quality research notes for "{research_topic}".
+    Include key findings, data points, and visited URLs.
+    CRITICAL: All URLs must be formatted as Markdown links: [Source Title/hostname](URL).
+    Include a 'SUGGESTED_FURTHER_RESEARCH' block if applicable.
   async_execution: true
   agent: senior_researcher
 
@@ -26,8 +28,9 @@ analysis_task:
     Review the raw research notes. Deduplicate information, resolve any conflicting data points,
     and organize the findings into logical categories. Verify the facts against the sources provided.
   expected_output: >
-    A comprehensive 'Fact Brief'. This should be a clean, structured document listing verified facts,
-    key insights, and organized data sections, ready for writing.
+    A dense, structured 'Fact Brief'. Deduplicate and verify all facts.
+    Organize findings into concise bullet points and logical categories.
+    Ensure every byte of information is high-value.
   output_file: outputs/analysis.md
   agent: research_analyst
 
@@ -42,10 +45,45 @@ content_drafting_task:
 
 publishing_task:
   description: >
-    Take the drafted content and format it into a clean, professional Markdown representation.
-    Add headers, bullet points, and ensure proper citation of sources.
-    Prepare the final text to be saved or emailed.
+    Review all research outputs and verify factual claims. For each significant claim:
+    1. Identify the source citation
+    2. Assess source credibility and recency
+    3. Cross-reference with other sources
+    4. Flag any unsupported statements, outdated information, or conflicting data
+    Consider the current year {current_year} for temporal context.
+  expected_output: >
+    A detailed validation report with: verified facts (marked ✓), flagged concerns (marked ⚠️),
+    and critical issues requiring additional research (marked ❌). 
+    CRITICAL: If any ⚠️ or ❌ are present, you MUST include a block labeled 'REQUIRED_RESEARCH' 
+    at the end with a JSON list of specific search queries to resolve the issues.
+    Every single cited source must be listed as a standard Markdown link: [Source Title/hostname](URL).
+  output_file: Research/fact_check.md
+  agent: publisher
+
+fact_checking_task:
+  description: >
+    Review the final research content. Verify all facts, citations, and sources.
+    Cross-reference with the Fact Brief and ensure accuracy.
   expected_output: >
     A final, polished Markdown file content, formatted perfectly for publication.
-  output_file: Research/final_research.md
-  agent: publisher
+    CRITICAL: You MUST include a dedicated "Sources" section at the end of the report.
+    Every single cited source must be included as a standard Markdown link: [Source Title/hostname](URL).
+    Do not use bare URLs or placeholders.
+  output_file: Research/fact_check.md
+  agent: fact_checker
+
+critical_analysis_task:
+  description: >
+    Critically evaluate the research data for:
+    1. Evidence Quality: Are claims backed by strong, recent, credible sources?
+    2. Completeness: Are counter-arguments and opposing views represented?
+    3. Bias Detection: Is there cherry-picking of data or one-sided presentation?
+    4. Hallucination Risks: Are there suspiciously specific claims without sources?
+    5. Logical Soundness: Are there gaps in reasoning or unsupported conclusions?
+  expected_output: >
+    A critical analysis report identifying: weak evidence areas, missing counter-perspectives,
+    potential biases, and specific research gaps to fill. Rate overall quality (1-10).
+    CRITICAL: If the quality rating is below 7, you MUST include a block labeled 'REQUIRED_RESEARCH'
+    at the end with a JSON list of specific search queries to fill the identified gaps.
+  output_file: Research/critical_analysis.md
+  agent: critical_analysis

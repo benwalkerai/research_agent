@@ -13,15 +13,18 @@ dependencies = [
     "chromadb>=1.1.1",
     "duckduckgo-search",
     "langchain-community",
+    "pytest>=9.0.2",
 ]
 
 [project.scripts]
 research_assistant = "research_assistant.main:run"
+research = "research_assistant.main:research"
 run_crew = "research_assistant.main:run"
 train = "research_assistant.main:train"
 replay = "research_assistant.main:replay"
 test = "research_assistant.main:test"
 run_with_trigger = "research_assistant.main:run_with_trigger"
+
 
 [build-system]
 requires = ["hatchling"]

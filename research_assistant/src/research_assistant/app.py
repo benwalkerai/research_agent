@@ -10,6 +10,76 @@ import re
 from dotenv import load_dotenv
 import markdown2
 from research_assistant.crew import ResearchAssistant
+import traceback
+import shutil
+
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Define a lock for the log queue to ensure thread safety
+log_lock = threading.Lock()
+
+# Configure circular logging
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+LOG_FILE = os.path.join(LOG_DIR, "research_assistant.log")
+
+# Create a separate logger for raw output to avoid interference with other loggers
+raw_logger = logging.getLogger("raw_terminal")
+raw_logger.setLevel(logging.INFO)
+raw_logger.propagate = False  # Don't send to root logger
+
+# Single RotatingFileHandler for all output
+file_handler = RotatingFileHandler(LOG_FILE, maxBytes=10*1024*1024, backupCount=5, encoding='utf-8')
+file_handler.setFormatter(logging.Formatter('%(message)s'))
+raw_logger.addHandler(file_handler)
+
+class GlobalOutputRedirector:
+    def __init__(self, original_stream, is_stderr=False):
+        self.original_stream = original_stream
+        self.is_stderr = is_stderr
+        self._is_handling = threading.local()
+
+    def write(self, data):
+        if not hasattr(self._is_handling, 'active'):
+            self._is_handling.active = False
+
+        # Write to original stream (terminal)
+        self.original_stream.write(data)
+        self.original_stream.flush()
+
+        if data.strip() and not self._is_handling.active:
+            self._is_handling.active = True
+            try:
+                # 1. Write to file via raw_logger
+                raw_logger.info(data.strip())
+                
+                # 2. Add to UI job_logs queue
+                with log_lock:
+                    job_logs.put(data)
+            finally:
+                self._is_handling.active = False
+
+    def flush(self):
+        self.original_stream.flush()
+
+    def isatty(self):
+        return self.original_stream.isatty()
+
+# Initialize global redirectors
+sys.stdout = GlobalOutputRedirector(sys.__stdout__)
+sys.stderr = GlobalOutputRedirector(sys.__stderr__, is_stderr=True)
+
+# Configure root logger to use stdout (which is now redirected)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -22,39 +92,15 @@ latest_research_output = ""
 output_file_path = ""
 stop_event = threading.Event()
 
-import logging
-
-# ... (LogCapture and QueueLogger classes omitted for brevity in diff, they remain same) ...
-
-class LogCapture:
-    def __init__(self):
-        self.terminal = sys.__stdout__
-    
-    def write(self, data):
-        try:
-            # DEBUG: See what is actually being captured
-            # sys.__stderr__.write(f"[c] {repr(data)}\n") 
-            
-            job_logs.put(data)
-            self.terminal.write(data)
-            self.terminal.flush()
-        except Exception:
-            pass 
-
-    def flush(self):
-        try:
-            self.terminal.flush()
-        except Exception:
-            pass
-    
-    def isatty(self):
-        return False
 
 class QueueLogger(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            job_logs.put(msg)
+            # Logs going to logging system will eventually hit stdout/stderr 
+            # and be handled by GlobalOutputRedirector.
+            # But we can also put them in the queue directly if needed.
+            # job_logs.put(msg) 
         except Exception:
             self.handleError(record)
 
@@ -62,29 +108,33 @@ class QueueLogger(logging.Handler):
 def run_research_background(topic, output_dir, depth="normal"):
     global job_status, latest_research_output, output_file_path, stop_event
     
-    # ... (logging setup same) ...
-    
-    # Print directly to verify capture works
-    print(f"DEBUG: Worker thread started for {topic}")
-    
-    # Capture Logger (CrewAI internal logs)
-    root_logger = logging.getLogger()
-    queue_handler = QueueLogger()
-    formatter = logging.Formatter('%(message)s') 
-    queue_handler.setFormatter(formatter)
-    root_logger.addHandler(queue_handler)
-    root_logger.setLevel(logging.INFO)
+    # Clear persistent memory to avoid embedding conflicts
+    for dir_name in ['db', '.crewai', 'chroma']:
+        full_path = os.path.join(os.getcwd(), dir_name)
+        if os.path.exists(full_path):
+            try:
+                shutil.rmtree(full_path)
+                logger.info(f"Cleared memory directory: {full_path}")
+            except Exception as e:
+                logger.warning(f"Failed to clear {full_path}: {e}")
+        
+        # Also check src/research_assistant/dir_name if running from root
+        sub_path = os.path.join(os.path.dirname(__file__), dir_name)
+        if os.path.exists(sub_path) and sub_path != full_path:
+            try:
+                shutil.rmtree(sub_path)
+                logger.info(f"Cleared memory directory: {sub_path}")
+            except Exception as e:
+                logger.warning(f"Failed to clear {sub_path}: {e}")
 
-    original_stdout = sys.stdout
-    sys.stdout = LogCapture()
-    
     try:
-        print("DEBUG: Inside try block, initializing Crew...")
+        job_status = "RUNNING"
+        logger.info("Inside try block, initializing Crew...")
         inputs = {'topic': topic, 'current_year': str(time.localtime().tm_year)}
         if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         crew_instance = ResearchAssistant()
-        print("DEBUG: Crew initialized. Starting pipeline...")
+        logger.info("Crew initialized. Starting pipeline...")
         
         # Pass stop check callback to pipeline
         result = crew_instance.run_pipeline(
@@ -94,10 +144,10 @@ def run_research_background(topic, output_dir, depth="normal"):
         )
         
         if stop_event.is_set():
-             print("DEBUG: Pipeline stopped by user.")
+             logger.info("Pipeline stopped by user.")
              job_status = "STOPPED"
         else:
-             print("DEBUG: Pipeline finished.")
+             logger.info("Pipeline finished.")
              job_status = "COMPLETED"
              if hasattr(result, 'raw'):
                  latest_research_output = result.raw
@@ -120,12 +170,11 @@ def run_research_background(topic, output_dir, depth="normal"):
         
     except Exception as e:
         job_status = "FAILED"
-        print(f"\n❌ detailed error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Detailed error: {e}")
+        logger.error(traceback.format_exc())
     finally:
-        sys.stdout = original_stdout
-        root_logger.removeHandler(queue_handler)
+        # No cleanup needed for global redirects
+        pass
 
 @app.route('/')
 def index():
@@ -154,18 +203,20 @@ def start_research():
     output_path = request.form.get('outputPath', 'Research')
     depth = request.form.get('depth_val', 'normal') # hidden input in index.html
 
+    # If already running, return appropriate format
     if job_status == "RUNNING":
-         return """<div class="p-4 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg">
+        if request.is_json or request.headers.get('Accept') == 'application/json':
+            return jsonify({"status": "error", "message": "Capabilities saturated. A job is already active."}), 409
+        return """<div class="p-4 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg">
                     Capabilities saturated. A job is already active.
-                   </div>"""
-    
+                   </div>""", 409
+
     # Support JSON for JS client
     if request.is_json or request.headers.get('Accept') == 'application/json':
         # Reset state
         while not job_logs.empty(): job_logs.get()
         latest_research_output = ""
         
-        # For JSON start, we expect JSON body or form data?
         # main.js sends JSON body: JSON.stringify({ topic, outputPath, depth })
         if request.is_json:
             data = request.json
@@ -174,14 +225,15 @@ def start_research():
             depth = data.get('depth', 'normal')
         
         if not topic:
-            sys.stderr.write("❌ Start Request missing topic\n")
+            logger.error("Start Request missing topic")
             return jsonify({"status": "error", "message": "Topic required"}), 400
             
-        sys.stderr.write(f"🚀 Launching thread for topic: {topic}\n")
+        logger.info(f"Launching thread for topic: {topic}")
+        job_status = "RUNNING"  # [UPDATE] Set status immediately
         thread = threading.Thread(target=run_research_background, args=(topic, output_path, depth))
         thread.daemon = True
         thread.start()
-        sys.stderr.write("✅ Thread started\n")
+        logger.info("Thread started")
         
         return jsonify({"status": "started", "message": "Research initiated"})
     

@@ -4,6 +4,9 @@ from research_assistant.tools.ddg_tool import DuckDuckGoSearchTool
 import os
 import json
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 @CrewBase
 class ResearchAssistant():
@@ -15,13 +18,14 @@ class ResearchAssistant():
     def __init__(self):
         # Default LLM
         self.ollama_base_url = os.getenv("OPENAI_API_BASE", "http://localhost:11434/v1")
-        self.ollama_model_name = os.getenv("OPENAI_MODEL_NAME", "ollama/llama3")
+        self.ollama_model_name = os.getenv("OPENAI_MODEL_NAME", "ollama/deepseek-r1:7b")
         self.openai_api_key = os.getenv("OPENAI_API_KEY", "NA")
 
         self.llm = LLM(
             model=self.ollama_model_name,
             base_url=self.ollama_base_url,
-            api_key=self.openai_api_key
+            api_key=self.openai_api_key,
+            config={"num_ctx": 8192}
         )
         
         # --- Native Memory Configuration ---
@@ -41,13 +45,13 @@ class ResearchAssistant():
              # OpenAI compatible provider expects /v1 usually, or uses the same as LLM
              self.embeddings_base_url = os.getenv("EMBEDDINGS_OLLAMA_BASE_URL", self.ollama_base_url)
 
-        print(f"--- Crew Configuration ---")
-        print(f"LLM Base: {self.ollama_base_url}")
-        print(f"LLM Model: {self.ollama_model_name}")
-        print(f"Embeddings Provider: {self.embeddings_provider}")
-        print(f"Embeddings Model: {self.embeddings_model}")
-        print(f"Embeddings Base: {self.embeddings_base_url}")
-        print(f"--------------------------")
+        logger.info(f"--- Crew Configuration ---")
+        logger.info(f"LLM Base: {self.ollama_base_url}")
+        logger.info(f"LLM Model: {self.ollama_model_name}")
+        logger.info(f"Embeddings Provider: {self.embeddings_provider}")
+        logger.info(f"Embeddings Model: {self.embeddings_model}")
+        logger.info(f"Embeddings Base: {self.embeddings_base_url}")
+        logger.info(f"--------------------------")
 
         # Standard Embedder Config
         self.embedder_config = {
@@ -64,16 +68,37 @@ class ResearchAssistant():
             self.embedder_config["config"]["api_base"] = self.embeddings_base_url
             self.embedder_config["config"]["api_key"] = self.openai_api_key
 
-    def _get_llm(self, model_name_env_var: str):
-        """Returns a custom LLM if the env var is set, otherwise returns default."""
-        override_model = os.getenv(model_name_env_var)
-        if override_model:
-            return LLM(
-                model=override_model,
-                base_url=self.ollama_base_url,
-                api_key=self.openai_api_key
-            )
+
+
+    def _get_llm(self, model_name_env_var: str = None):
+        """Returns the default LLM (standardized across all agents)."""
         return self.llm
+
+    @property
+    def agents(self):
+        """Collect all agent instances from methods decorated with @agent."""
+        return [
+            self.lead_research_strategist(),
+            self.senior_researcher(),
+            self.research_analyst(),
+            self.content_writer(),
+            self.publisher(),
+            self.fact_checker(),
+            self.critical_analysis()
+        ]
+
+    @property
+    def tasks(self):
+        """Collect all task instances from methods decorated with @task."""
+        return [
+            self.strategy_task(),
+            self.research_execution_task(),
+            self.analysis_task(),
+            self.content_drafting_task(),
+            self.publishing_task(),
+            self.fact_checking_task(),
+            self.critical_analysis_task()
+        ]
 
     # --- Agents ---
     @agent
@@ -118,6 +143,22 @@ class ResearchAssistant():
             verbose=True
         )
 
+    @agent
+    def fact_checker(self) -> Agent:
+        return Agent(
+            config=self.agents_config['fact_checker'],
+            llm=self._get_llm("FACT_CHECK_MODEL"),
+            verbose=True
+        )
+
+    @agent
+    def critical_analysis(self) -> Agent:
+        return Agent(
+            config=self.agents_config['critical_analysis'],
+            llm=self._get_llm("CRITICAL_ANALYSIS_MODEL"),
+            verbose=True
+        )
+
     # --- Tasks ---
     @task
     def strategy_task(self) -> Task:
@@ -149,6 +190,18 @@ class ResearchAssistant():
             config=self.tasks_config['publishing_task'],
         )
 
+    @task
+    def fact_checking_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['fact_checking_task'],
+        )
+
+    @task
+    def critical_analysis_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['critical_analysis_task'],
+        )
+
     # --- Pipelines ---
     def run_pipeline(self, inputs, depth="normal", stop_check=None):
         """
@@ -160,7 +213,7 @@ class ResearchAssistant():
         if stop_check and stop_check(): return "Stopped"
 
         # 1. Strategy Phase
-        print("--- Starting Strategy Phase ---")
+        logger.info("--- Starting Strategy Phase ---")
 
         strategy_crew = Crew(
             agents=[self.lead_research_strategist()],
@@ -170,8 +223,8 @@ class ResearchAssistant():
             memory=True, 
             embedder=self.embedder_config
         )
-        print("\n✨ Passing your request to the Lead Strategist...")
-        print("✨ Hang on a sec, they've not had their coffee yet...")
+        logger.info("\n✨ Passing your request to the Lead Strategist...")
+        logger.info("✨ Hang on a sec, they've not had their coffee yet...")
         strategy_output = strategy_crew.kickoff(inputs=inputs)
         
         try:
@@ -193,7 +246,7 @@ class ResearchAssistant():
             }
             limit = topic_limits.get(depth, 10)
             if len(topics) > limit:
-                print(f"⚠️ Limit applied: Truncating {len(topics)} topics to {limit} for '{depth}' mode.")
+                logger.warning(f"⚠️ Limit applied: Truncating {len(topics)} topics to {limit} for '{depth}' mode.")
                 topics = topics[:limit]
             
             topics = json.loads(raw)
@@ -201,15 +254,15 @@ class ResearchAssistant():
             # [Optimization] Limit topics based on depth to control speed
 
         except Exception as e:
-             print(f"Error parsing strategy output: {e}\nOutput was: {strategy_output}")
+             logger.error(f"Error parsing strategy output: {e}\nOutput was: {strategy_output}")
              topics = [inputs['topic']] # Fallback
         
-        print(f"--- Strategy Phase Complete. Topics: {topics} ---")
+        logger.info(f"--- Strategy Phase Complete. Topics: {topics} ---")
 
         # 2. Dynamic Research Phase (Iterative)
-        print("--- Starting Dynamic Research Phase ---")
-        print("\n✨ Strategy complete! Passing your topic to the Research Team.")
-        print("✨ They're frantically using Google. Their fingers must be getting tired!")
+        logger.info("--- Starting Dynamic Research Phase ---")
+        logger.info("\n✨ Strategy complete! Passing your topic to the Research Team.")
+        logger.info("✨ They're frantically using Google. Their fingers must be getting tired!")
         
         # Keep track of all researched topics to avoid loops
         researched_topics = set(topics)
@@ -227,17 +280,37 @@ class ResearchAssistant():
         # Initial batch
         current_batch_topics = topics
         
+        # Validation results storage
+        all_validation_reports = []
+        
         while current_batch_topics and current_iteration < max_iterations:
             if stop_check and stop_check():
-                print("🛑 Stop signal detected. Breaking research loop.")
+                logger.info("🛑 Stop signal detected. Breaking research loop.")
                 break
 
-            print(f"--- Research Iteration {current_iteration + 1} with topics: {current_batch_topics} ---")
+            logger.info(f"--- Research Iteration {current_iteration + 1} with topics: {current_batch_topics} ---")
+            
+            # --- PARALLEL EXECUTION: Dynamic Researcher Spawning ---
+            # Calculate optimal number of concurrent researchers
+            max_concurrent = {
+                "fast": 2,
+                "normal": 3,
+                "deep": 5
+            }.get(depth, 3)
+            
+            num_topics = len(current_batch_topics)
+            num_researchers = min(num_topics, max_concurrent)
+            
+            logger.info(f"🚀 Spawning {num_researchers} concurrent researchers for {num_topics} topics")
+            
+            # Create multiple researcher instances
+            researchers = [self.senior_researcher() for _ in range(num_researchers)]
             
             research_tasks = []
-            researcher = self.senior_researcher()
-            
-            for topic in current_batch_topics:
+            for idx, topic in enumerate(current_batch_topics):
+                # Assign tasks to researchers in round-robin fashion
+                researcher = researchers[idx % num_researchers]
+                
                 # Create a dedicated task for each topic
                 task_config = self.tasks_config['research_execution_task'].copy()
                 task_config['description'] = task_config['description'].replace('{research_topic}', topic)
@@ -249,7 +322,7 @@ class ResearchAssistant():
                     config=task_config,
                     agent=researcher,
                     output_file=f"outputs/research_{safe_topic}.md",
-                    async_execution=False 
+                    async_execution=True  # Enable async execution
                 )
                 research_tasks.append(t)
             
@@ -257,57 +330,95 @@ class ResearchAssistant():
                 break
 
             research_crew = Crew(
-                agents=[researcher],
+                agents=researchers,  # Multiple researchers
                 tasks=research_tasks,
-                process=Process.sequential,
+                process=Process.hierarchical,  # Required for async tasks
+                manager_llm=self.llm,  # Manager coordinates async tasks
                 verbose=True,
                 memory=True,
                 embedder=self.embedder_config
             )
             
-            # Execute current batch
+            # Execute current batch (tasks run in parallel)
             batch_output = research_crew.kickoff()
             all_research_outputs.append(str(batch_output))
             
-            # Extract new topics for next iteration
+            # --- 2.1 EXTRACT RESEARCH SUGGESTIONS ---
             new_topics = []
-            
-            # Inspect raw outputs from tasks (CrewAI 1.x CrewOutput exposes tasks_output)
             if hasattr(batch_output, 'tasks_output'):
                 for task_out in batch_output.tasks_output:
                     raw_out = str(task_out.raw)
-                    # Check for SUGGESTED_FURTHER_RESEARCH block
                     match = re.search(r'SUGGESTED_FURTHER_RESEARCH.*?(\[.*?\])', raw_out, re.DOTALL)
                     if match:
                         try:
-                            # Parse JSON list
-                            suggestions = json.loads(match.group(1))
-                            for s in suggestions:
+                            suggs = json.loads(match.group(1))
+                            for s in suggs:
                                 if s not in researched_topics:
                                     new_topics.append(s)
                                     researched_topics.add(s)
-
                         except Exception as e:
-                            print(f"Failed to parse suggestions: {e}")
+                            logger.error(f"Failed to parse research suggestions: {e}")
             
-            current_batch_topics = new_topics
+            # --- 2.2 VALIDATION PHASE ---
+            if all_research_outputs:
+                logger.info(f"--- Starting Validation Phase for Iteration {current_iteration + 1} ---")
+                
+                recent_data = all_research_outputs[-1]
+                
+                v_fact_check = self.fact_checking_task()
+                v_fact_check.description += f"\n\n[DATA TO VALIDATE]:\n{recent_data}"
+                
+                v_critical = self.critical_analysis_task()
+                v_critical.description += f"\n\n[DATA TO ANALYZE]:\n{recent_data}"
+                
+                validation_crew = Crew(
+                    agents=[self.fact_checker(), self.critical_analysis()],
+                    tasks=[v_fact_check, v_critical],
+                    process=Process.sequential,
+                    verbose=True,
+                    embedder=self.embedder_config
+                )
+                
+                validation_result = validation_crew.kickoff()
+                all_validation_reports.append(str(validation_result))
+                
+                # Extract REQUIRED_RESEARCH from validation
+                if hasattr(validation_result, 'tasks_output'):
+                    for v_out in validation_result.tasks_output:
+                        raw_v = str(v_out.raw)
+                        v_match = re.search(r'REQUIRED_RESEARCH.*?(\[.*?\])', raw_v, re.DOTALL)
+                        if v_match:
+                            try:
+                                v_suggestions = json.loads(v_match.group(1))
+                                for vs in v_suggestions:
+                                    if vs not in researched_topics:
+                                        new_topics.append(vs)
+                                        researched_topics.add(vs)
+                                logger.info(f"✨ Validation flagged issues! Added {len(v_suggestions)} follow-up queries.")
+                            except Exception as e:
+                                logger.error(f"Failed to parse validation suggestions: {e}")
+            
+            current_batch_topics = new_topics 
+            
             current_iteration += 1
             
-        print("--- Research Phase Complete ---")
+        logger.info("--- Research Phase Complete ---")
         
         # 3. Reporting Phase
-        print("--- Starting Reporting Phase ---")
-        print("\n✨ Research done. Collating all the data for the Writer...")
-        print("✨ Polishing the final report. Almost there!")
+        logger.info("--- Starting Reporting Phase ---")
+        logger.info("\n✨ Research done. Collating all the data for the Writer...")
+        logger.info("✨ Polishing the final report. Almost there!")
         
         reporting_inputs = inputs.copy()
-        # Combine all gathered data
+        # Combine all gathered data (research + validation)
         reporting_inputs['research_data'] = "\n\n".join(all_research_outputs)
+        reporting_inputs['validation_data'] = "\n\n".join(all_validation_reports)
         
         # Manually create tasks to set output files (although mostly set in tasks.yaml, 
         # we instantiate here to belong to this crew instance)
         t_analysis = self.analysis_task()
         t_analysis.description += f"\n\n[INPUT DATA FROM RESEARCH]:\n{reporting_inputs['research_data']}"
+        t_analysis.description += f"\n\n[INPUT DATA FROM VALIDATION]:\n{reporting_inputs['validation_data']}"
         
         t_drafting = self.content_drafting_task()
         t_publishing = self.publishing_task()

@@ -65,343 +65,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (reasoningContent) reasoningContent.innerHTML = '';
         if (liveActivity) liveActivity.innerHTML = '';
         if (citationRail) citationRail.innerHTML = '<h4>Sources</h4>';
-        if (markdownViewer) markdownViewer.innerHTML = '<div class="empty-state"><div class="empty-icon">⚛</div><p>Initializing neural pathways...</p></div>';
+        seenUrls.clear();
+        if (markdownViewer) markdownViewer.innerHTML = '<div class="empty-state"><div class="empty-icon">SCANNING</div><p>Initializing agent protocols...</p></div>';
     };
 
-    // --- Neural Network Animation ---
-    let neuralAnimationInterval = null;
-    let neuralNodes = [];
-    let neuralConnections = [];
-    let dataPulses = [];
-
-    const startNeuralAnimation = () => {
+    // --- Scanner Animation ---
+    const startScannerAnimation = () => {
         if (!markdownViewer) return;
 
-        // Create neural network container
-        const networkContainer = document.createElement('div');
-        networkContainer.className = 'neural-network';
-        networkContainer.id = 'neuralNetwork';
-
-        // Create SVG for connections and pulses
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        svg.style.position = 'absolute';
-        svg.style.top = '0';
-        svg.style.left = '0';
-
-        // Add gradient definition for connections
-        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-        gradient.setAttribute('id', 'connectionGradient');
-        gradient.innerHTML = `
-            <stop offset="0%" stop-color="rgba(99, 102, 241, 0.6)" />
-            <stop offset="50%" stop-color="rgba(6, 182, 212, 0.8)" />
-            <stop offset="100%" stop-color="rgba(99, 102, 241, 0.6)" />
+        markdownViewer.innerHTML = `
+            <div class="scanner-container">
+                <div class="scanner-text">Scanning Digital Archives</div>
+                <div class="scanner-bar-track">
+                    <div class="scanner-light"></div>
+                </div>
+                <p class="text-slate-500 text-xs animate-pulse">Gathering intelligence...</p>
+            </div>
         `;
-        defs.appendChild(gradient);
-
-        // Add glow filter for pulses
-        const glowFilter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-        glowFilter.setAttribute('id', 'pulseGlow');
-        glowFilter.innerHTML = `
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-        `;
-        defs.appendChild(glowFilter);
-        svg.appendChild(defs);
-        networkContainer.appendChild(svg);
-
-        const width = markdownViewer.offsetWidth;
-        const height = markdownViewer.offsetHeight;
-
-        // Reset state
-        neuralNodes = [];
-        neuralConnections = [];
-        dataPulses = [];
-
-        // Create STRUCTURED layered neural network
-        // Layers: Input (8) -> Hidden1 (12) -> Hidden2 (10) -> Hidden3 (8) -> Output (6)
-        const layers = [
-            { count: 8, x: width * 0.1 },
-            { count: 12, x: width * 0.3 },
-            { count: 10, x: width * 0.5 },
-            { count: 8, x: width * 0.7 },
-            { count: 6, x: width * 0.9 }
-        ];
-
-        const layerNodes = []; // 2D array: layerNodes[layerIndex][nodeIndex]
-
-        // Create nodes for each layer
-        layers.forEach((layer, layerIndex) => {
-            const nodesInLayer = [];
-            const spacing = height / (layer.count + 1);
-
-            for (let i = 0; i < layer.count; i++) {
-                const node = document.createElement('div');
-
-                // Vary sizes - input/output smaller, hidden layers larger
-                let sizeClass = 'medium';
-                if (layerIndex === 0 || layerIndex === layers.length - 1) {
-                    sizeClass = 'small';
-                } else if (layerIndex === 1 || layerIndex === 2) {
-                    sizeClass = Math.random() > 0.5 ? 'large' : 'medium';
-                }
-
-                node.className = `neural-node ${sizeClass}`;
-
-                const x = layer.x + (Math.random() - 0.5) * 20; // Small jitter
-                const y = spacing * (i + 1) + (Math.random() - 0.5) * 10;
-
-                node.style.left = `${x}px`;
-                node.style.top = `${y}px`;
-                node.style.animationDelay = `${Math.random() * 2}s`;
-
-                networkContainer.appendChild(node);
-
-                const nodeData = {
-                    x, y,
-                    baseX: x,  // Store original position for subtle drift
-                    baseY: y,
-                    vx: (Math.random() - 0.5) * 0.3,
-                    vy: (Math.random() - 0.5) * 0.3,
-                    element: node,
-                    layer: layerIndex
-                };
-
-                nodesInLayer.push(nodeData);
-                neuralNodes.push(nodeData);
-            }
-            layerNodes.push(nodesInLayer);
-        });
-
-        // Connect adjacent layers (each node connects to several nodes in next layer)
-        for (let l = 0; l < layerNodes.length - 1; l++) {
-            const currentLayer = layerNodes[l];
-            const nextLayer = layerNodes[l + 1];
-
-            currentLayer.forEach(nodeA => {
-                // Connect to 3-5 nodes in the next layer
-                const connectionCount = Math.floor(Math.random() * 3) + 3;
-                const shuffled = [...nextLayer].sort(() => Math.random() - 0.5);
-
-                for (let c = 0; c < Math.min(connectionCount, shuffled.length); c++) {
-                    const nodeB = shuffled[c];
-
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', nodeA.x);
-                    line.setAttribute('y1', nodeA.y);
-                    line.setAttribute('x2', nodeB.x);
-                    line.setAttribute('y2', nodeB.y);
-                    line.classList.add('neural-connection');
-
-                    // Random strength
-                    if (Math.random() > 0.6) {
-                        line.classList.add('strong');
-                    }
-
-                    line.style.animationDelay = `${Math.random() * 2}s`;
-                    svg.appendChild(line);
-
-                    neuralConnections.push({
-                        line,
-                        nodeA,
-                        nodeB
-                    });
-                }
-            });
-        }
-
-        // Create data pulses that flow LEFT to RIGHT through the network
-        const pulseCount = 20;
-        for (let i = 0; i < pulseCount; i++) {
-            if (neuralConnections.length === 0) break;
-
-            const conn = neuralConnections[Math.floor(Math.random() * neuralConnections.length)];
-            const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            pulse.setAttribute('r', '4');
-            pulse.classList.add('data-pulse');
-            pulse.setAttribute('filter', 'url(#pulseGlow)');
-            pulse.setAttribute('cx', conn.nodeA.x);
-            pulse.setAttribute('cy', conn.nodeA.y);
-            svg.appendChild(pulse);
-
-            dataPulses.push({
-                element: pulse,
-                connection: conn,
-                progress: Math.random(),
-                speed: 0.01 + Math.random() * 0.015,
-                direction: 1  // Always flow forward (left to right)
-            });
-        }
-
-        markdownViewer.innerHTML = '';
-        markdownViewer.appendChild(networkContainer);
-
-        // Thinking state variables
-        let thinkingIntensity = 0.5;
-        let intensityDirection = 1;
-        let frameCount = 0;
-        let lastBurstTime = 0;
-        let activeNodes = new Set();
-
-        // Main animation loop
-        neuralAnimationInterval = setInterval(() => {
-            frameCount++;
-
-            // Breathing intensity - slowly oscillate thinking activity
-            thinkingIntensity += 0.005 * intensityDirection;
-            if (thinkingIntensity > 1) {
-                thinkingIntensity = 1;
-                intensityDirection = -1;
-            } else if (thinkingIntensity < 0.3) {
-                thinkingIntensity = 0.3;
-                intensityDirection = 1;
-            }
-
-            // Random node activation (neurons firing)
-            if (Math.random() < 0.15 * thinkingIntensity) {
-                const randomNode = neuralNodes[Math.floor(Math.random() * neuralNodes.length)];
-                if (!activeNodes.has(randomNode)) {
-                    activeNodes.add(randomNode);
-                    randomNode.element.classList.add('thinking');
-                    randomNode.activationTime = frameCount;
-                }
-            }
-
-            // Deactivate nodes after a short time
-            activeNodes.forEach(node => {
-                if (frameCount - node.activationTime > 15 + Math.random() * 20) {
-                    node.element.classList.remove('thinking');
-                    activeNodes.delete(node);
-                }
-            });
-
-            // Periodic burst pattern - ripple effect through the network
-            if (frameCount - lastBurstTime > 60 + Math.random() * 120) {
-                lastBurstTime = frameCount;
-
-                // Pick a random starting layer and trigger cascade
-                const startLayer = Math.floor(Math.random() * 3);
-                const layerNodesList = neuralNodes.filter(n => n.layer === startLayer);
-
-                layerNodesList.forEach((node, i) => {
-                    setTimeout(() => {
-                        node.element.classList.add('burst');
-                        setTimeout(() => node.element.classList.remove('burst'), 300);
-                    }, i * 50);
-                });
-
-                // Cascade to next layers
-                for (let l = startLayer + 1; l < 5; l++) {
-                    const delay = (l - startLayer) * 150;
-                    const layerN = neuralNodes.filter(n => n.layer === l);
-                    layerN.forEach((node, i) => {
-                        setTimeout(() => {
-                            node.element.classList.add('burst');
-                            setTimeout(() => node.element.classList.remove('burst'), 200);
-                        }, delay + i * 30);
-                    });
-                }
-            }
-
-            // Random connection flash (synaptic firing)
-            if (Math.random() < 0.1 * thinkingIntensity) {
-                const randomConn = neuralConnections[Math.floor(Math.random() * neuralConnections.length)];
-                randomConn.line.classList.add('firing');
-                setTimeout(() => randomConn.line.classList.remove('firing'), 150);
-            }
-
-            // Subtle node drift (stay near base position)
-            neuralNodes.forEach(node => {
-                node.x += node.vx;
-                node.y += node.vy;
-
-                // Drift back toward base position
-                const driftX = node.baseX - node.x;
-                const driftY = node.baseY - node.y;
-                node.vx += driftX * 0.01;
-                node.vy += driftY * 0.01;
-
-                // Dampen velocity
-                node.vx *= 0.98;
-                node.vy *= 0.98;
-
-                // Add small random perturbation (more when thinking intensely)
-                node.vx += (Math.random() - 0.5) * 0.05 * thinkingIntensity;
-                node.vy += (Math.random() - 0.5) * 0.05 * thinkingIntensity;
-
-                node.element.style.left = `${node.x}px`;
-                node.element.style.top = `${node.y}px`;
-            });
-
-            // Update connection lines
-            neuralConnections.forEach(conn => {
-                conn.line.setAttribute('x1', conn.nodeA.x);
-                conn.line.setAttribute('y1', conn.nodeA.y);
-                conn.line.setAttribute('x2', conn.nodeB.x);
-                conn.line.setAttribute('y2', conn.nodeB.y);
-            });
-
-            // Animate data pulses along connections
-            dataPulses.forEach(pulse => {
-                // Vary speed based on thinking intensity
-                const currentSpeed = pulse.speed * (0.7 + thinkingIntensity * 0.6);
-                pulse.progress += currentSpeed * pulse.direction;
-
-                // When pulse reaches end, jump to a new connection (forward flow)
-                if (pulse.progress >= 1) {
-                    pulse.progress = 0;
-
-                    // Find connections from the destination node's layer going forward
-                    const currentNodeB = pulse.connection.nodeB;
-                    const forwardConnections = neuralConnections.filter(c =>
-                        c.nodeA === currentNodeB ||
-                        (c.nodeA.layer === currentNodeB.layer && Math.random() > 0.7)
-                    );
-
-                    if (forwardConnections.length > 0) {
-                        pulse.connection = forwardConnections[Math.floor(Math.random() * forwardConnections.length)];
-                    } else {
-                        // Loop back to start of network
-                        const startConnections = neuralConnections.filter(c => c.nodeA.layer === 0);
-                        if (startConnections.length > 0) {
-                            pulse.connection = startConnections[Math.floor(Math.random() * startConnections.length)];
-                        }
-                    }
-                }
-
-                // Interpolate position
-                const conn = pulse.connection;
-                const px = conn.nodeA.x + (conn.nodeB.x - conn.nodeA.x) * pulse.progress;
-                const py = conn.nodeA.y + (conn.nodeB.y - conn.nodeA.y) * pulse.progress;
-
-                pulse.element.setAttribute('cx', px);
-                pulse.element.setAttribute('cy', py);
-
-                // Pulse size varies with intensity
-                const pulseSize = 3 + thinkingIntensity * 3;
-                pulse.element.setAttribute('r', pulseSize);
-            });
-
-        }, 30);
     };
 
-    const stopNeuralAnimation = () => {
-        const networkContainer = document.getElementById('neuralNetwork');
-        if (networkContainer) {
-            networkContainer.remove();
-        }
-        if (neuralAnimationInterval) {
-            clearInterval(neuralAnimationInterval);
-            neuralAnimationInterval = null;
-        }
-        neuralNodes = [];
-        neuralConnections = [];
-        dataPulses = [];
+    const stopScannerAnimation = () => {
+        // No explicit interval to stop, as it's CSS-based, 
+        // but we'll clear the container when results arrive.
     };
 
     // --- Live Activity Stream ---
@@ -615,15 +300,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Citation Extraction ---
-    const updateCitations = (markdownText) => {
+    const seenUrls = new Set();
+    let citationBuffer = '';
+    const updateCitations = (text) => {
         if (!citationRail) return;
+
+        citationBuffer += text;
+        // Keep buffer size reasonable
+        if (citationBuffer.length > 5000) {
+            citationBuffer = citationBuffer.substring(citationBuffer.length - 5000);
+        }
+
         const regex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
         let match;
-        const seenUrls = new Set();
 
-        citationRail.innerHTML = '<h4>Sources</h4>';
-
-        while ((match = regex.exec(markdownText)) !== null) {
+        // Reset regex index because of 'g' flag if reusing, but here it's local
+        while ((match = regex.exec(citationBuffer)) !== null) {
             const title = match[1];
             const url = match[2];
 
@@ -734,8 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchResult = async () => {
         if (!markdownViewer) return;
 
-        // Stop neural network animation
-        stopNeuralAnimation();
+        // Stop scanner animation
+        stopScannerAnimation();
 
         try {
             const res = await fetch('/api/result-fragment');
@@ -790,6 +482,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activity) {
             addActivityCard(activity.text, activity.type);
         }
+
+        // [NEW] Extract citations from log stream
+        updateCitations(text);
 
         let el = document.createElement('div');
         el.className = 'log-line opacity-80 mb-1'; // Default
@@ -908,8 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
         switchToActiveView(topic);
         addActivityCard(`Initializing scan: ${topic} (${depth})`, 'scanning');
 
-        // Start neural network animation
-        startNeuralAnimation();
+        // Start scanner animation
+        startScannerAnimation();
 
         try {
             const res = await fetch('/api/start-research', {
@@ -920,6 +615,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ topic, outputPath, depth })
             });
+            if (!res.ok) {
+                let errorMsg = 'Failed to start.';
+                try {
+                    const errorData = await res.json();
+                    errorMsg = errorData.message || errorMsg;
+                } catch (e) {
+                    // It might be HTML
+                    console.warn("Error response was not JSON");
+                }
+                alert(errorMsg);
+                return;
+            }
+
             const data = await res.json();
 
             if (data.status === 'started') {
