@@ -322,15 +322,25 @@ class ResearchAssistant():
                     config=task_config,
                     agent=researcher,
                     output_file=f"outputs/research_{safe_topic}.md",
-                    async_execution=True  # Enable async execution
+                    async_execution=True  # All research tasks are async for parallel execution
                 )
                 research_tasks.append(t)
+            
+            # Add a final synchronous aggregation task to collect results
+            # This satisfies CrewAI's requirement that the last task must not be async
+            aggregation_task = Task(
+                description="Collect and organize all research findings from the parallel research tasks.",
+                expected_output="A summary confirming all research tasks completed successfully.",
+                agent=self.research_analyst(),  # Use existing agent
+                async_execution=False  # Final task must be synchronous
+            )
+            research_tasks.append(aggregation_task)
             
             if not research_tasks:
                 break
 
             research_crew = Crew(
-                agents=researchers,  # Multiple researchers
+                agents=researchers + [self.research_analyst()],  # Include all agents
                 tasks=research_tasks,
                 process=Process.hierarchical,  # Required for async tasks
                 manager_llm=self.llm,  # Manager coordinates async tasks
@@ -339,7 +349,7 @@ class ResearchAssistant():
                 embedder=self.embedder_config
             )
             
-            # Execute current batch (tasks run in parallel)
+            # Execute current batch (research tasks run in parallel, then aggregation)
             batch_output = research_crew.kickoff()
             all_research_outputs.append(str(batch_output))
             
