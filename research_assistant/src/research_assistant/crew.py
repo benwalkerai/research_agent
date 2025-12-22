@@ -238,6 +238,11 @@ class ResearchAssistant():
                 
             topics = json.loads(raw)
             
+            # Ensure topics is a list of strings (not dicts)
+            if topics and isinstance(topics[0], dict):
+                # If topics are dicts, extract the topic strings
+                topics = [t.get('topic', str(t)) if isinstance(t, dict) else str(t) for t in topics]
+            
             # [Optimization] Limit topics based on depth to control speed
             topic_limits = {
                 "fast": 5,
@@ -248,10 +253,6 @@ class ResearchAssistant():
             if len(topics) > limit:
                 logger.warning(f"⚠️ Limit applied: Truncating {len(topics)} topics to {limit} for '{depth}' mode.")
                 topics = topics[:limit]
-            
-            topics = json.loads(raw)
-            
-            # [Optimization] Limit topics based on depth to control speed
 
         except Exception as e:
              logger.error(f"Error parsing strategy output: {e}\nOutput was: {strategy_output}")
@@ -306,6 +307,9 @@ class ResearchAssistant():
             # Create multiple researcher instances
             researchers = [self.senior_researcher() for _ in range(num_researchers)]
             
+            # Create a single analyst instance for aggregation
+            analyst = self.research_analyst()
+            
             research_tasks = []
             for idx, topic in enumerate(current_batch_topics):
                 # Assign tasks to researchers in round-robin fashion
@@ -331,7 +335,7 @@ class ResearchAssistant():
             aggregation_task = Task(
                 description="Collect and organize all research findings from the parallel research tasks.",
                 expected_output="A summary confirming all research tasks completed successfully.",
-                agent=self.research_analyst(),  # Use existing agent
+                agent=analyst,  # Use the single analyst instance
                 async_execution=False  # Final task must be synchronous
             )
             research_tasks.append(aggregation_task)
@@ -340,7 +344,7 @@ class ResearchAssistant():
                 break
 
             research_crew = Crew(
-                agents=researchers + [self.research_analyst()],  # Include all agents
+                agents=researchers + [analyst],  # Include all unique agent instances
                 tasks=research_tasks,
                 process=Process.hierarchical,  # Required for async tasks
                 manager_llm=self.llm,  # Manager coordinates async tasks
