@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusBadge = document.getElementById('statusBadge');
     const markdownViewer = document.getElementById('markdownViewer'); // Need to check HTML for this one too?
     const downloadBtn = document.getElementById('downloadBtn');
+    const downloadFormatSelect = document.getElementById('downloadFormat');
     const depthRange = document.getElementById('depthRange'); // name=depth in HTML check ID?
     const depthLabel = document.getElementById('depthLabel');
     const liveActivity = document.getElementById('liveActivity'); // check HTML
@@ -20,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.textContent = label;
     };
     setDownloadEnabled(false);
+
+    const getSelectedFormat = () => (downloadFormatSelect?.value || 'markdown').toLowerCase();
 
     // New Elements
     const topicDisplay = document.getElementById('sidebar-topic'); // ID in HTML is sidebar-topic
@@ -719,8 +722,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (downloadBtn.disabled) return;
 
             try {
-                setDownloadEnabled(false, 'Preparing...');
-                const res = await fetch('/api/download-report');
+                const selectedFormat = getSelectedFormat();
+                setDownloadEnabled(false, `Preparing ${selectedFormat.toUpperCase()}...`);
+                const res = await fetch(`/api/download-report?format=${encodeURIComponent(selectedFormat)}`);
                 if (!res.ok) {
                     let errorMsg = 'Failed to download report.';
                     try {
@@ -737,7 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = 'research_report.md';
+                const extensionMap = { markdown: 'md', html: 'html', pdf: 'pdf' };
+                const ext = extensionMap[selectedFormat] || 'md';
+                link.download = `research_report.${ext}`;
                 document.body.appendChild(link);
                 link.click();
                 link.remove();

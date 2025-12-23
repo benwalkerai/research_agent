@@ -10,6 +10,14 @@ import re
 import html
 from dotenv import load_dotenv
 import markdown2
+try:
+    from weasyprint import HTML  # Requires GTK/Pango/Cairo libs
+    WEASYPRINT_AVAILABLE = True
+    WEASYPRINT_IMPORT_ERROR = ""
+except Exception as exc:
+    HTML = None
+    WEASYPRINT_AVAILABLE = False
+    WEASYPRINT_IMPORT_ERROR = str(exc)
 from research_assistant.crew import ResearchAssistant
 import traceback
 import shutil
@@ -125,6 +133,33 @@ def cleanup_old_outputs(folder_path: str, retention_days: int = 7) -> None:
 
     if removed_files or removed_dirs:
         logger.info(f"Outputs cleanup removed {removed_files} files and {removed_dirs} empty folders older than {retention_days} days.")
+
+
+def _load_latest_markdown() -> str:
+    """Return the latest markdown output from disk or memory."""
+    global output_file_path, latest_research_output
+    if output_file_path and os.path.exists(output_file_path):
+        try:
+            with open(output_file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as exc:
+            logger.warning(f"Failed reading output file, falling back to in-memory content: {exc}")
+    return str(latest_research_output or "").strip()
+
+
+def _render_markdown_to_html(markdown_text: str) -> str:
+    """Convert markdown text to HTML using the same extras as the live preview."""
+    return markdown2.markdown(
+        markdown_text or "",
+        extras=['fenced-code-blocks', 'tables', 'break-on-newline']
+    )
+
+
+def _render_pdf_from_html(html_content: str) -> bytes:
+    """Generate a PDF document from HTML content."""
+    if not WEASYPRINT_AVAILABLE:
+        raise RuntimeError(f"WeasyPrint unavailable: {WEASYPRINT_IMPORT_ERROR or 'missing system dependencies'}")
+    return HTML(string=html_content or "<p>No content</p>").write_pdf()
 
 
 def sanitize_topic_for_path(topic: str) -> str:
@@ -473,26 +508,55 @@ def get_result_fragment():
     else:
         return "..." # Keep waiting
 
-@app.route('/api/download-report')
+@app.route('/api/download-report', methods=['GET'])
 def download_report():
-    """Download the generated research report as a markdown file."""
-    global output_file_path, job_status
-    
+    global job_status, output_file_path
     if job_status != "COMPLETED":
-        return jsonify({"error": "No completed research available"}), 404
-    
-    if not output_file_path or not os.path.exists(output_file_path):
-        return jsonify({"error": "Report file not found"}), 404
-    
+        return jsonify({"error": "No completed report available"}), 400
+
+    format_param = (request.args.get('format') or 'markdown').lower()
+    if format_param not in {"markdown", "html", "pdf"}:
+        return jsonify({"error": "Unsupported format"}), 400
+
+    markdown_text = _load_latest_markdown()
+    if not markdown_text:
+        return jsonify({"error": "No report content available"}), 404
+
     try:
+        if format_param == "markdown":
+            filename = os.path.basename(output_file_path or "research_report.md")
+            if not filename.endswith(".md"):
+                filename = "research_report.md"
+            return send_file(
+                io.BytesIO(markdown_text.encode('utf-8')),
+                as_attachment=True,
+                download_name=filename,
+                mimetype='text/markdown'
+            )
+
+        html_content = _render_markdown_to_html(markdown_text)
+        if format_param == "html":
+            filename = os.path.splitext(os.path.basename(output_file_path or "research_report"))[0] + ".html"
+            return send_file(
+                io.BytesIO(html_content.encode('utf-8')),
+                as_attachment=True,
+                download_name=filename,
+                mimetype='text/html'
+            )
+
+        # PDF
+        pdf_bytes = _render_pdf_from_html(html_content)
+        filename = os.path.splitext(os.path.basename(output_file_path or "research_report"))[0] + ".pdf"
         return send_file(
-            output_file_path,
+            io.BytesIO(pdf_bytes),
             as_attachment=True,
-            download_name='research_report.md',
-            mimetype='text/markdown'
+            download_name=filename,
+            mimetype='application/pdf'
         )
-    except Exception as e:
-        return jsonify({"error": f"Failed to download file: {str(e)}"}), 500
+
+    except Exception as exc:
+        logger.error(f"Error preparing download ({format_param}): {exc}")
+        return jsonify({"error": "Failed to generate requested format"}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Research Agent on http://localhost:5000")
