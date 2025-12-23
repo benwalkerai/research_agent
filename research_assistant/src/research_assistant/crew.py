@@ -1,6 +1,7 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from research_assistant.tools.ddg_tool import DuckDuckGoSearchTool
+from research_assistant.guardrails import ContentGuardrails, OutputGuardrails, ResourceGuardrails
 import os
 import json
 import re
@@ -215,6 +216,11 @@ class ResearchAssistant():
         output_base_dir = os.path.abspath(output_base_dir)
         os.makedirs(output_base_dir, exist_ok=True)
 
+        # Guardrails
+        resource_guardrails = ResourceGuardrails()
+        content_guardrails = ContentGuardrails()
+        output_guardrails = OutputGuardrails()
+
         # 1. Strategy Phase
         logger.info("--- Starting Strategy Phase ---")
 
@@ -291,6 +297,11 @@ class ResearchAssistant():
         all_validation_reports = []
         
         while current_batch_topics and current_iteration < max_iterations:
+            limit_check = resource_guardrails.check_limits()
+            if not limit_check["allowed"]:
+                logger.warning(f"🛑 Circuit breaker triggered: {limit_check['reason']}")
+                break
+
             if stop_check and stop_check():
                 logger.info("🛑 Stop signal detected. Breaking research loop.")
                 break
@@ -363,11 +374,17 @@ class ResearchAssistant():
             
             # Execute current batch (research tasks run in parallel, then aggregation)
             batch_output = research_crew.kickoff()
-            all_research_outputs.append(str(batch_output))
+
+            scan_result = content_guardrails.scan_text(str(batch_output))
+            if not scan_result["allowed"]:
+                logger.warning(f"⚠️ Content blocked: {scan_result['reason']}. Skipping this batch.")
+                batch_output = None
+            else:
+                all_research_outputs.append(str(batch_output))
             
             # --- 2.1 EXTRACT RESEARCH SUGGESTIONS ---
             new_topics = []
-            if hasattr(batch_output, 'tasks_output'):
+            if batch_output and hasattr(batch_output, 'tasks_output'):
                 for task_out in batch_output.tasks_output:
                     raw_out = str(task_out.raw)
                     match = re.search(r'SUGGESTED_FURTHER_RESEARCH.*?(\[.*?\])', raw_out, re.DOTALL)
@@ -424,6 +441,12 @@ class ResearchAssistant():
             
             current_batch_topics = new_topics 
             
+            resource_guardrails.track_usage(
+                search_calls=len(current_batch_topics),
+                tokens=self._estimate_tokens(batch_output),
+                cost=self._estimate_cost(batch_output)
+            )
+
             current_iteration += 1
             
         logger.info("--- Research Phase Complete ---")
@@ -460,7 +483,36 @@ class ResearchAssistant():
         )
         
         result = reporting_crew.kickoff(inputs=reporting_inputs)
-        return result
+        final_content = str(result)
+
+        # --- Output Guardrails ---
+        final_content = output_guardrails.redact_pii(final_content)
+
+        safety_check = output_guardrails.validate_output_safety(final_content)
+        if not safety_check["safe"]:
+            warning = f"⚠️ Output withheld: {safety_check['category']} content detected. Action: {safety_check['action']}"
+            logger.warning(warning)
+            final_content = warning
+            return final_content
+
+        quality_check = output_guardrails.validate_output_quality(
+            final_content,
+            reporting_inputs.get('validation_data', '')
+        )
+        if not quality_check["quality_pass"]:
+            logger.warning(f"Quality guardrail triggered: {quality_check['reason']}")
+            final_content += f"\n\n> Guardrail Notice: {quality_check['reason']} ({quality_check['action']})"
+
+        source_urls = self._extract_source_urls(reporting_inputs.get('research_data', ''))
+        copyright_check = output_guardrails.check_copyright_risk(
+            final_content,
+            source_urls
+        )
+        if copyright_check["risk"] != "LOW":
+            logger.warning(f"Copyright guardrail: {copyright_check['reason']}")
+            final_content += f"\n\n> Copyright Notice: {copyright_check['reason']} ({copyright_check['action']})"
+
+        return final_content
 
     @crew
     def crew(self) -> Crew:
@@ -472,3 +524,27 @@ class ResearchAssistant():
             memory=False,
             embedder=self.embedder_config
         )
+
+    @staticmethod
+    def _estimate_tokens(batch_output) -> int:
+        """Rudimentary token estimate based on character count."""
+        if not batch_output:
+            return 0
+        text = str(batch_output)
+        # Approximate 4 characters per token
+        return max(0, len(text) // 4)
+
+    @staticmethod
+    def _estimate_cost(batch_output) -> float:
+        """Rudimentary cost estimate (placeholder until real billing integration)."""
+        # Assume $0.000002 per token (example); reuse token estimate
+        tokens = ResearchAssistant._estimate_tokens(batch_output)
+        return tokens * 0.000002
+
+    @staticmethod
+    def _extract_source_urls(text: str):
+        """Extract Markdown URLs from research data."""
+        if not text:
+            return []
+        matches = re.findall(r'\((https?://[^\)]+)\)', text)
+        return matches
