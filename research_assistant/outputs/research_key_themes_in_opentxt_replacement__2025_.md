@@ -1,1 +1,0 @@
-** [Key Themes in Opentxt Replacement (2025)](https://example.com/opentxt-2025)

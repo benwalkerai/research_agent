@@ -115,8 +115,7 @@ class ResearchAssistant():
             config=self.agents_config['senior_researcher'],
             tools=[DuckDuckGoSearchTool()],
             llm=self._get_llm("RESEARCHER_MODEL"),
-            verbose=True,
-            memory=True
+            verbose=True
         )
 
     @agent
@@ -203,7 +202,7 @@ class ResearchAssistant():
         )
 
     # --- Pipelines ---
-    def run_pipeline(self, inputs, depth="normal", stop_check=None):
+    def run_pipeline(self, inputs, depth="normal", stop_check=None, output_base_dir=None):
         """
         Orchestrates the dynamic pipeline:
         1. Strategy Phase (Single Task) -> Output: List of topics
@@ -212,15 +211,22 @@ class ResearchAssistant():
         """
         if stop_check and stop_check(): return "Stopped"
 
+        output_base_dir = output_base_dir or "outputs"
+        output_base_dir = os.path.abspath(output_base_dir)
+        os.makedirs(output_base_dir, exist_ok=True)
+
         # 1. Strategy Phase
         logger.info("--- Starting Strategy Phase ---")
 
+        strategy_task = self.strategy_task()
+        strategy_task.output_file = os.path.join(output_base_dir, "strategy.md")
+
         strategy_crew = Crew(
             agents=[self.lead_research_strategist()],
-            tasks=[self.strategy_task()],
+            tasks=[strategy_task],
             process=Process.sequential,
             verbose=True,
-            memory=True, 
+            memory=False, 
             embedder=self.embedder_config
         )
         logger.info("\n✨ Passing your request to the Lead Strategist...")
@@ -322,10 +328,12 @@ class ResearchAssistant():
                 
                 safe_topic = re.sub(r'[^a-zA-Z0-9]', '_', topic)[:50].lower()
                 
+                research_output_path = os.path.join(output_base_dir, f"research_{safe_topic}.md")
+
                 t = Task(
                     config=task_config,
                     agent=researcher,
-                    output_file=f"outputs/research_{safe_topic}.md",
+                    output_file=research_output_path,
                     async_execution=True  # All research tasks are async for parallel execution
                 )
                 research_tasks.append(t)
@@ -349,7 +357,7 @@ class ResearchAssistant():
                 process=Process.hierarchical,  # Required for async tasks
                 manager_llm=self.llm,  # Manager coordinates async tasks
                 verbose=True,
-                memory=True,
+                memory=False,
                 embedder=self.embedder_config
             )
             
@@ -380,9 +388,11 @@ class ResearchAssistant():
                 recent_data = all_research_outputs[-1]
                 
                 v_fact_check = self.fact_checking_task()
+                v_fact_check.output_file = os.path.join(output_base_dir, "fact_check.md")
                 v_fact_check.description += f"\n\n[DATA TO VALIDATE]:\n{recent_data}"
                 
                 v_critical = self.critical_analysis_task()
+                v_critical.output_file = os.path.join(output_base_dir, "critical_analysis.md")
                 v_critical.description += f"\n\n[DATA TO ANALYZE]:\n{recent_data}"
                 
                 validation_crew = Crew(
@@ -431,18 +441,21 @@ class ResearchAssistant():
         # Manually create tasks to set output files (although mostly set in tasks.yaml, 
         # we instantiate here to belong to this crew instance)
         t_analysis = self.analysis_task()
+        t_analysis.output_file = os.path.join(output_base_dir, "analysis.md")
         t_analysis.description += f"\n\n[INPUT DATA FROM RESEARCH]:\n{reporting_inputs['research_data']}"
         t_analysis.description += f"\n\n[INPUT DATA FROM VALIDATION]:\n{reporting_inputs['validation_data']}"
         
         t_drafting = self.content_drafting_task()
+        t_drafting.output_file = os.path.join(output_base_dir, "draft.md")
         t_publishing = self.publishing_task()
+        t_publishing.output_file = os.path.join(output_base_dir, "publishing.md")
         
         reporting_crew = Crew(
                 agents=[self.research_analyst(), self.content_writer(), self.publisher()],
                 tasks=[t_analysis, t_drafting, t_publishing],
                 process=Process.sequential,
                 verbose=True,
-                memory=True,
+                memory=False,
                 embedder=self.embedder_config
         )
         
@@ -456,6 +469,6 @@ class ResearchAssistant():
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
-            memory=True,
+            memory=False,
             embedder=self.embedder_config
         )

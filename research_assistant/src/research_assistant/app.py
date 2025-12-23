@@ -7,6 +7,7 @@ import sys
 import io
 import json
 import re
+import html
 from dotenv import load_dotenv
 import markdown2
 from research_assistant.crew import ResearchAssistant
@@ -135,8 +136,75 @@ def sanitize_topic_for_path(topic: str) -> str:
     return cleaned[:50] or 'research'
 
 
+class InputGuardrails:
+    BLOCKED_PATTERNS = [
+        r'ignore previous instructions',
+        r'you are now',
+        r'system prompt',
+        r'<script>',
+        r'\.\./\.\./\.\./',  # Path traversal
+    ]
+
+    SENSITIVE_TOPICS = [
+        'how to make explosives',
+        'illegal activities',
+        'personal data extraction',
+    ]
+
+    DEPTH_LEVELS = ["fast", "normal", "deep"]
+
+    def validate_input(self, topic: str, max_length: int = 500) -> dict:
+        """Validates and sanitizes user input"""
+        if not topic:
+            return {"valid": False, "reason": "Topic is required"}
+
+        if len(topic) > max_length:
+            return {"valid": False, "reason": "Topic exceeds maximum length"}
+
+        topic_lower = topic.lower()
+        for pattern in self.BLOCKED_PATTERNS:
+            if re.search(pattern, topic_lower, re.IGNORECASE):
+                return {"valid": False, "reason": "Potential prompt injection detected"}
+
+        for sensitive in self.SENSITIVE_TOPICS:
+            if sensitive in topic_lower:
+                return {"valid": False, "reason": "Topic not permitted", "requires_review": True}
+
+        sanitized = html.escape(topic.strip())
+        return {"valid": True, "sanitized_topic": sanitized}
+
+    def validate_request_scope(self, topic: str, depth: str) -> dict:
+        """Prevent resource exhaustion attacks"""
+        depth_normalized = (depth or "normal").lower()
+
+        if depth_normalized not in self.DEPTH_LEVELS:
+            return {"valid": False, "reason": "Invalid depth parameter"}
+
+        estimated_queries = self._estimate_query_count(topic, depth_normalized)
+        if estimated_queries > 100:
+            return {
+                "valid": False,
+                "reason": "Topic scope too broad - would generate excessive queries",
+                "suggestion": "Please narrow your research topic"
+            }
+
+        return {"valid": True, "depth": depth_normalized}
+
+    def _estimate_query_count(self, topic: str, depth: str) -> int:
+        """Very rough heuristic based on topic length and depth multiplier"""
+        base_queries = max(5, len(topic.split()))
+        depth_multiplier = {
+            "fast": 1,
+            "normal": 3,
+            "deep": 6
+        }.get(depth, 3)
+
+        return base_queries * depth_multiplier
+
+
 app = Flask(__name__)
 cleanup_old_outputs(OUTPUTS_DIR)
+guardrails = InputGuardrails()
 
 # Global state
 job_status = "IDLE" 
@@ -255,45 +323,61 @@ def start_research():
     output_path = request.form.get('outputPath', 'Research')
     depth = request.form.get('depth_val', 'normal') # hidden input in index.html
 
+    def _guardrail_error(resp_data, status_code=400):
+        if request.is_json or request.headers.get('Accept') == 'application/json':
+            return jsonify(resp_data), status_code
+        return f"<div class='p-4 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg'>{resp_data.get('message', resp_data.get('reason', 'Invalid request'))}</div>", status_code
+
     # If already running, return appropriate format
     if job_status == "RUNNING":
-        if request.is_json or request.headers.get('Accept') == 'application/json':
-            return jsonify({"status": "error", "message": "Capabilities saturated. A job is already active."}), 409
-        return """<div class="p-4 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg">
-                    Capabilities saturated. A job is already active.
-                   </div>""", 409
+        return _guardrail_error({"status": "error", "message": "Capabilities saturated. A job is already active."}, 409)
 
-    # Support JSON for JS client
-    if request.is_json or request.headers.get('Accept') == 'application/json':
-        # Reset state
+    is_json_request = request.is_json or request.headers.get('Accept') == 'application/json'
+
+    if is_json_request:
         while not job_logs.empty(): job_logs.get()
         latest_research_output = ""
-        
-        # main.js sends JSON body: JSON.stringify({ topic, outputPath, depth })
+
         if request.is_json:
             data = request.json
             topic = data.get('topic')
             output_path = data.get('outputPath', 'Research')
             depth = data.get('depth', 'normal')
-        
-        if not topic:
-            logger.error("Start Request missing topic")
-            return jsonify({"status": "error", "message": "Topic required"}), 400
-            
-        logger.info(f"Launching thread for topic: {topic}")
-        job_status = "RUNNING"  # [UPDATE] Set status immediately
-        thread = threading.Thread(target=run_research_background, args=(topic, output_path, depth))
-        thread.daemon = True
-        thread.start()
-        logger.info("Thread started")
-        
+
+    if not topic:
+        logger.error("Start Request missing topic")
+        return _guardrail_error({"status": "error", "message": "Topic required"}, 400)
+
+    validation = guardrails.validate_input(topic)
+    if not validation.get("valid"):
+        logger.warning(f"Topic validation failed: {validation}")
+        return _guardrail_error({"status": "error", "message": validation.get("reason", "Invalid topic")}, 400)
+
+    topic = validation["sanitized_topic"]
+
+    scope_validation = guardrails.validate_request_scope(topic, depth)
+    if not scope_validation.get("valid"):
+        logger.warning(f"Scope validation failed: {scope_validation}")
+        body = {
+            "status": "error",
+            "message": scope_validation.get("reason", "Invalid request")
+        }
+        suggestion = scope_validation.get("suggestion")
+        if suggestion:
+            body["suggestion"] = suggestion
+        return _guardrail_error(body, 400)
+
+    depth = scope_validation["depth"]
+
+    logger.info(f"Launching thread for topic: {topic}")
+    job_status = "RUNNING"
+    thread = threading.Thread(target=run_research_background, args=(topic, output_path, depth))
+    thread.daemon = True
+    thread.start()
+    logger.info("Thread started")
+
+    if is_json_request:
         return jsonify({"status": "started", "message": "Research initiated"})
-    
-    # HTMX / Form fallback
-    if job_status == "RUNNING":
-         return """<div class="p-4 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg">
-                    Capabilities saturated. A job is already active.
-                   </div>"""
     
     # Return the Active Workspace Fragment (Swaps into #active-view)
     # Using Tailwind classes to match the design
