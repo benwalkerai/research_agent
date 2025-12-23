@@ -123,7 +123,7 @@
                             </label>
                             <!-- Range Slider with simple JS for instant label update (HTMX doesn't do client-side interactivity well alone) -->
                             <div class="bg-black/20 p-2 rounded-md border border-white/5">
-                                <input type="range" name="depth" min="1" max="3" value="2" step="1"
+                                <input id="depthRange" type="range" name="depth" min="1" max="3" value="2" step="1"
                                     class="w-full h-1 bg-slate-700 rounded-sm appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-cyan-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-900"
                                     oninput="const map={1:'Fast',2:'Normal',3:'Deep'}; document.getElementById('depthLabel').innerText=map[this.value]; document.getElementById('hiddenDepth').value=map[this.value].toLowerCase();">
                                 <input type="hidden" name="depth_val" id="hiddenDepth" value="normal">
@@ -136,7 +136,7 @@
                         <div class="flex flex-col gap-2">
                             <label class="text-xs text-slate-400 font-bold uppercase tracking-wider">Output
                                 Target</label>
-                            <input type="text" name="outputPath" value="Research"
+                            <input id="outputPath" type="text" name="outputPath" value="Research"
                                 class="bg-slate-900/60 border border-white/10 rounded-md py-2 px-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
                         </div>
                     </form>
@@ -228,8 +228,8 @@
                             </div>
                         </div>
                         <div class="flex gap-2">
-                            <button id="downloadBtn"
-                                class="px-3 py-1.5 bg-indigo-600/20 text-indigo-400 text-xs rounded border border-indigo-600/50 hover:bg-indigo-600/40 transition-colors">
+                            <button id="downloadBtn" disabled
+                                class="px-3 py-1.5 bg-indigo-600/20 text-indigo-400 text-xs rounded border border-indigo-600/50 hover:bg-indigo-600/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                 Download Report
                             </button>
                         </div>

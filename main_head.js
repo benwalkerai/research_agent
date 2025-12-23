@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const researchForm = document.getElementById('researchForm');
     const startBtn = document.getElementById('startBtn'); // sidebar btn
@@ -12,14 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const liveActivity = document.getElementById('liveActivity'); // check HTML
     const terminalPanel = document.getElementById('terminalPanel'); // check HTML
     const terminalToggle = document.getElementById('terminalToggle'); // check HTML
-
-    // --- UI Helpers ---
-    const setDownloadEnabled = (enabled, label = 'Download Report') => {
-        if (!downloadBtn) return;
-        downloadBtn.disabled = !enabled;
-        downloadBtn.textContent = label;
-    };
-    setDownloadEnabled(false);
 
     // New Elements
     const topicDisplay = document.getElementById('sidebar-topic'); // ID in HTML is sidebar-topic
@@ -127,16 +119,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.createElement('div');
         card.className = `activity-card ${type}`;
 
-        let icon = 'ℹ️';
-        if (type === 'scanning') icon = '🔍';
-        if (type === 'reading') icon = '📖';
-        if (type === 'writing') icon = '✍️';
-        if (type === 'error') icon = '❌';
-        if (type === 'success') icon = '✅';
-        if (type === 'thinking') icon = '💭';
-        if (type === 'analyzing') icon = '🔬';
-        if (type === 'planning') icon = '📋';
-        if (type === 'searching') icon = '🌐';
+        let icon = 'Ôä╣´©Å';
+        if (type === 'scanning') icon = '­ƒöì';
+        if (type === 'reading') icon = '­ƒôû';
+        if (type === 'writing') icon = 'Ô£ì´©Å';
+        if (type === 'error') icon = 'ÔØî';
+        if (type === 'success') icon = 'Ô£à';
+        if (type === 'thinking') icon = '­ƒÆ¡';
+        if (type === 'analyzing') icon = '­ƒö¼';
+        if (type === 'planning') icon = '­ƒôï';
+        if (type === 'searching') icon = '­ƒîÉ';
 
         const cleanText = text.replace(/\[.*?\]/g, '').replace(/"/g, '').trim();
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -190,13 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Phase changes with movie references
         if (lower.includes('strategy phase')) {
-            return { text: '🎯 Plotting the heist (Ocean\'s Eleven style)', type: 'planning' };
+            return { text: '­ƒÄ» Plotting the heist (Ocean\'s Eleven style)', type: 'planning' };
         }
         if (lower.includes('research phase')) {
-            return { text: '🚀 Entering the Matrix...', type: 'scanning' };
+            return { text: '­ƒÜÇ Entering the Matrix...', type: 'scanning' };
         }
         if (lower.includes('reporting phase')) {
-            return { text: '📝 Compiling the mission briefing', type: 'writing' };
+            return { text: '­ƒôØ Compiling the mission briefing', type: 'writing' };
         }
 
 
@@ -252,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (thoughtMatch && thoughtMatch[1]) {
                 const thought = thoughtMatch[1].trim().substring(0, 70);
                 if (thought.length > 10) {
-                    return { text: `💭 ${thought}`, type: 'thinking' };
+                    return { text: `­ƒÆ¡ ${thought}`, type: 'thinking' };
                 }
             }
             const phrases = [
@@ -268,17 +260,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lower.includes('action:')) {
             const actionMatch = logText.match(/action:\s*(\w+)/i);
             if (actionMatch && actionMatch[1]) {
-                return { text: `⚡ Activating ${actionMatch[1]} protocol`, type: 'reading' };
+                return { text: `ÔÜí Activating ${actionMatch[1]} protocol`, type: 'reading' };
             }
         }
 
         // Completion indicators
         if (lower.includes('completed') || lower.includes('finished')) {
             const phrases = [
-                '✨ Mission accomplished!',
-                '🎉 Achievement unlocked',
-                '✅ That\'s a wrap!',
-                '🏁 Nailed it like Thor\'s hammer'
+                'Ô£¿ Mission accomplished!',
+                '­ƒÄë Achievement unlocked',
+                'Ô£à That\'s a wrap!',
+                '­ƒÅü Nailed it like Thor\'s hammer'
             ];
             return { text: phrases[Math.floor(Math.random() * phrases.length)], type: 'success' };
         }
@@ -286,9 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Errors with humor
         if (lower.includes('error') || lower.includes('failed')) {
             const phrases = [
-                '⚠️ Houston, we have a problem',
-                '🔧 Hitting a plot twist',
-                '⚡ Glitch in the Matrix detected',
+                'ÔÜá´©Å Houston, we have a problem',
+                '­ƒöº Hitting a plot twist',
+                'ÔÜí Glitch in the Matrix detected',
                 'Sorry Dave, I cannot help with that'
             ];
             return { text: phrases[Math.floor(Math.random() * phrases.length)], type: 'error' };
@@ -301,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!reasoningContent) return;
         const step = document.createElement('div');
         step.className = 'reasoning-step';
-        if (text.includes('✨')) step.classList.add('highlight');
+        if (text.includes('Ô£¿')) step.classList.add('highlight');
         step.textContent = text.replace(/>/g, '').trim();
         reasoningContent.appendChild(step);
         reasoningContent.scrollTop = reasoningContent.scrollHeight;
@@ -516,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. Action (Tool Usage)
         else if (text.includes('Action:')) {
             el.className = 'text-cyan-400 font-bold mt-2 flex items-center gap-2';
-            el.innerHTML = `<span>⚡</span> ${text}`;
+            el.innerHTML = `<span>ÔÜí</span> ${text}`;
         }
         // 5. Action Input (Argument)
         else if (text.match(/^\s*Action Input:/i)) {
@@ -573,18 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateStatus('FINISHED');
                 researchStarted = false;
                 currentAgent = 'IDLE';
-                fetchResult();
-                setDownloadEnabled(true);
             } else if (backendStatus === 'FAILED') {
                 updateStatus('FAILED');
                 researchStarted = false;
                 currentAgent = 'IDLE';
-                setDownloadEnabled(false);
             } else if (backendStatus === 'STOPPED' || backendStatus === 'STOPPING') {
                 updateStatus('STOPPED');
                 researchStarted = false;
                 currentAgent = 'IDLE';
-                setDownloadEnabled(false);
             } else {
                 updateStatus(backendStatus);
             }
@@ -595,7 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStatus('FINISHED');
             eventSource.close();
             fetchResult();
-            setDownloadEnabled(true);
         });
 
         eventSource.onerror = () => {
@@ -614,7 +601,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const depth = depthMap[depthVal]?.toLowerCase() || 'normal';
 
         switchToActiveView(topic);
-        setDownloadEnabled(false);
         addActivityCard(`Initializing scan: ${topic} (${depth})`, 'scanning');
 
         // Start scanner animation
@@ -648,7 +634,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateStatus('WARMING_UP');
                 researchStarted = true;
                 startStreaming();
-                setDownloadEnabled(false);
             } else {
                 alert(data.message || 'Failed to start.');
             }
@@ -667,8 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (data.status === 'stopping') {
                     updateStatus('STOPPING');
-                    appendLog("🛑 User requested stop...");
-                    setDownloadEnabled(false);
+                    appendLog("­ƒøæ User requested stop...");
                 }
             } catch (e) {
                 console.error(e);
@@ -710,44 +694,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (heroInput) {
         heroInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleHeroSubmit();
-        });
-    }
-
-    // --- Download handler ---
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', async () => {
-            if (downloadBtn.disabled) return;
-
-            try {
-                setDownloadEnabled(false, 'Preparing...');
-                const res = await fetch('/api/download-report');
-                if (!res.ok) {
-                    let errorMsg = 'Failed to download report.';
-                    try {
-                        const errData = await res.json();
-                        if (errData?.error) errorMsg = errData.error;
-                    } catch {
-                        // ignore parse errors
-                    }
-                    alert(errorMsg);
-                    return;
-                }
-
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'research_report.md';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                window.URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error(err);
-                alert('Unexpected error downloading report.');
-            } finally {
-                setDownloadEnabled(true);
-            }
         });
     }
 });

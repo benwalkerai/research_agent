@@ -12,6 +12,7 @@ import markdown2
 from research_assistant.crew import ResearchAssistant
 import traceback
 import shutil
+from datetime import datetime, timedelta
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -83,7 +84,59 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+# Paths
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+OUTPUTS_DIR = os.path.join(BASE_DIR, 'outputs')
+
+
+def cleanup_old_outputs(folder_path: str, retention_days: int = 7) -> None:
+    """
+    Delete files (and empty folders) older than retention_days within folder_path.
+    Runs on application start to keep outputs folder from growing indefinitely.
+    """
+    if not os.path.exists(folder_path):
+        logger.info(f"Outputs directory not found, skipping cleanup: {folder_path}")
+        return
+
+    cutoff = datetime.now() - timedelta(days=retention_days)
+    removed_files = 0
+    removed_dirs = 0
+
+    for root_dir, dirs, files in os.walk(folder_path, topdown=False):
+        for file_name in files:
+            file_path = os.path.join(root_dir, file_name)
+            try:
+                file_mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+                if file_mtime < cutoff:
+                    os.remove(file_path)
+                    removed_files += 1
+            except Exception as exc:
+                logger.warning(f"Failed to remove old output '{file_path}': {exc}")
+
+        for dir_name in dirs:
+            dir_path = os.path.join(root_dir, dir_name)
+            try:
+                if not os.listdir(dir_path):
+                    os.rmdir(dir_path)
+                    removed_dirs += 1
+            except Exception as exc:
+                logger.warning(f"Failed to cleanup empty folder '{dir_path}': {exc}")
+
+    if removed_files or removed_dirs:
+        logger.info(f"Outputs cleanup removed {removed_files} files and {removed_dirs} empty folders older than {retention_days} days.")
+
+
+def sanitize_topic_for_path(topic: str) -> str:
+    """Return a filesystem-friendly version of the topic."""
+    cleaned = re.sub(r'[^\w\s-]', '', (topic or 'research')).strip()
+    if not cleaned:
+        cleaned = 'research'
+    cleaned = re.sub(r'[-\s]+', '_', cleaned).lower()
+    return cleaned[:50] or 'research'
+
+
 app = Flask(__name__)
+cleanup_old_outputs(OUTPUTS_DIR)
 
 # Global state
 job_status = "IDLE" 
@@ -107,6 +160,13 @@ class QueueLogger(logging.Handler):
 
 def run_research_background(topic, output_dir, depth="normal"):
     global job_status, latest_research_output, output_file_path, stop_event
+    base_output_dir = os.path.abspath(output_dir or 'Research')
+    safe_topic = sanitize_topic_for_path(topic)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    run_folder_name = f"{safe_topic}_{timestamp}"
+    run_output_dir = os.path.join(base_output_dir, run_folder_name)
+    os.makedirs(run_output_dir, exist_ok=True)
+    logger.info(f"Writing artifacts for this run to: {run_output_dir}")
     
     # Clear persistent memory to avoid embedding conflicts
     for dir_name in ['db', '.crewai', 'chroma']:
@@ -131,7 +191,6 @@ def run_research_background(topic, output_dir, depth="normal"):
         job_status = "RUNNING"
         logger.info("Inside try block, initializing Crew...")
         inputs = {'topic': topic, 'current_year': str(time.localtime().tm_year)}
-        if not os.path.exists(output_dir): os.makedirs(output_dir)
 
         crew_instance = ResearchAssistant()
         logger.info("Crew initialized. Starting pipeline...")
@@ -154,15 +213,8 @@ def run_research_background(topic, output_dir, depth="normal"):
              else:
                  latest_research_output = str(result)
              
-             # Generate unique filename from topic and timestamp
-             import re
-             from datetime import datetime
-             safe_topic = re.sub(r'[^\w\s-]', '', topic).strip()[:50]  # Remove special chars, limit length
-             safe_topic = re.sub(r'[-\s]+', '_', safe_topic).lower()   # Replace spaces/dashes with underscores
-             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
              filename = f"research_{safe_topic}_{timestamp}.md"
-             
-             output_path = os.path.join(output_dir, filename)
+             output_path = os.path.join(run_output_dir, filename)
              output_file_path = os.path.abspath(output_path)
              with open(output_path, 'w', encoding='utf-8') as f:
                  f.write(latest_research_output)
