@@ -135,6 +135,59 @@ def cleanup_old_outputs(folder_path: str, retention_days: int = 7) -> None:
         logger.info(f"Outputs cleanup removed {removed_files} files and {removed_dirs} empty folders older than {retention_days} days.")
 
 
+def archive_outputs_snapshot(folder_path: str, run_start_time: datetime | None = None) -> str | None:
+    """
+    Move files created/modified during the current run into a timestamped subfolder.
+    Returns the archive folder path or None if nothing was moved.
+    """
+    if not os.path.isdir(folder_path):
+        logger.info(f"Archive skipped, outputs directory missing: {folder_path}")
+        return None
+
+    start_ts = run_start_time.timestamp() if run_start_time else None
+    items_to_move: list[str] = []
+
+    for entry in os.listdir(folder_path):
+        entry_path = os.path.join(folder_path, entry)
+        if not os.path.exists(entry_path):
+            continue
+        # Skip previous archives (timestamp-named folders)
+        if os.path.isdir(entry_path) and re.fullmatch(r'\d{8}_\d{6}(?:_\d+)?', entry):
+            continue
+
+        if start_ts:
+            try:
+                if os.path.getmtime(entry_path) < start_ts:
+                    continue
+            except OSError as exc:
+                logger.warning(f"Skipping '{entry_path}' during archive (mtime unreadable): {exc}")
+                continue
+
+        items_to_move.append(entry_path)
+
+    if not items_to_move:
+        logger.info("No fresh outputs detected for archiving.")
+        return None
+
+    base_archive_name = datetime.now().strftime('%Y%m%d_%H%M%S')
+    archive_dir = os.path.join(folder_path, base_archive_name)
+    suffix = 1
+    while os.path.exists(archive_dir):
+        archive_dir = os.path.join(folder_path, f"{base_archive_name}_{suffix:02d}")
+        suffix += 1
+
+    os.makedirs(archive_dir, exist_ok=False)
+
+    for item in items_to_move:
+        try:
+            shutil.move(item, archive_dir)
+        except Exception as exc:
+            logger.warning(f"Failed to archive '{item}': {exc}")
+
+    logger.info(f"Archived {len(items_to_move)} artifacts to {archive_dir}")
+    return archive_dir
+
+
 def _load_latest_markdown() -> str:
     """Return the latest markdown output from disk or memory."""
     global output_file_path, latest_research_output
@@ -265,7 +318,8 @@ def run_research_background(topic, output_dir, depth="normal"):
     global job_status, latest_research_output, output_file_path, stop_event
     base_output_dir = os.path.abspath(output_dir or 'Research')
     safe_topic = sanitize_topic_for_path(topic)
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    run_start_time = datetime.now()
+    timestamp = run_start_time.strftime('%Y%m%d_%H%M%S')
     run_folder_name = f"{safe_topic}_{timestamp}"
     run_output_dir = os.path.join(base_output_dir, run_folder_name)
     os.makedirs(run_output_dir, exist_ok=True)
@@ -322,6 +376,11 @@ def run_research_background(topic, output_dir, depth="normal"):
              with open(output_path, 'w', encoding='utf-8') as f:
                  f.write(latest_research_output)
              print(f"\n✅ Research completed! Output saved to: {output_file_path}")
+             archive_dir = archive_outputs_snapshot(OUTPUTS_DIR, run_start_time=run_start_time)
+             if archive_dir:
+                 logger.info(f"Snapshot archived to {archive_dir}")
+             else:
+                 logger.info("No outputs snapshot created (nothing new detected).")
         
     except Exception as e:
         job_status = "FAILED"

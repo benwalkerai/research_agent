@@ -13,6 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const liveActivity = document.getElementById('liveActivity'); // check HTML
     const terminalPanel = document.getElementById('terminalPanel'); // check HTML
     const terminalToggle = document.getElementById('terminalToggle'); // check HTML
+    const newTopicBtn = document.getElementById('newTopicBtn');
+
+    const defaultMarkdownPlaceholder = `
+        <div class="flex flex-col items-center justify-center h-full text-slate-500 opacity-50">
+            <div class="text-4xl mb-4 animate-bounce">⚛</div>
+            <p>Initializing neural pathways...</p>
+        </div>
+    `;
+    const seenUrls = new Set();
+    let citationBuffer = '';
 
     // --- UI Helpers ---
     const setDownloadEnabled = (enabled, label = 'Download Report') => {
@@ -23,6 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setDownloadEnabled(false);
 
     const getSelectedFormat = () => (downloadFormatSelect?.value || 'markdown').toLowerCase();
+
+    const setNewTopicVisible = (visible) => {
+        if (!newTopicBtn) return;
+        newTopicBtn.classList.toggle('hidden', !visible);
+    };
 
     // New Elements
     const topicDisplay = document.getElementById('sidebar-topic'); // ID in HTML is sidebar-topic
@@ -78,6 +93,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (citationRail) citationRail.innerHTML = '<h4>Sources</h4>';
         seenUrls.clear();
         if (markdownViewer) markdownViewer.innerHTML = '<div class="empty-state"><div class="empty-icon">SCANNING</div><p>Initializing agent protocols...</p></div>';
+        setNewTopicVisible(false);
+    };
+
+    const resetToHeroView = () => {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+
+        if (heroSection) heroSection.classList.remove('hidden');
+        if (activeResearchView) activeResearchView.classList.add('hidden');
+        if (workspaceHeader) workspaceHeader.classList.add('hidden');
+
+        if (topicDisplay) topicDisplay.value = '';
+        if (heroInput) {
+            heroInput.value = '';
+            heroInput.focus();
+        }
+
+        if (reasoningContent) reasoningContent.innerHTML = '';
+        if (liveActivity) liveActivity.innerHTML = '';
+        if (citationRail) citationRail.innerHTML = '<h4>Sources</h4>';
+        seenUrls.clear();
+        citationBuffer = '';
+        if (markdownViewer) markdownViewer.innerHTML = defaultMarkdownPlaceholder;
+
+        setDownloadEnabled(false);
+        setNewTopicVisible(false);
+
+        researchStarted = false;
+        currentAgent = 'IDLE';
+        updateStatus('IDLE');
     };
 
     // --- Scanner Animation ---
@@ -311,8 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Citation Extraction ---
-    const seenUrls = new Set();
-    let citationBuffer = '';
     const updateCitations = (text) => {
         if (!citationRail) return;
 
@@ -578,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentAgent = 'IDLE';
                 fetchResult();
                 setDownloadEnabled(true);
+                setNewTopicVisible(true);
             } else if (backendStatus === 'FAILED') {
                 updateStatus('FAILED');
                 researchStarted = false;
@@ -599,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
             eventSource.close();
             fetchResult();
             setDownloadEnabled(true);
+            setNewTopicVisible(true);
         });
 
         eventSource.onerror = () => {
@@ -713,6 +760,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (heroInput) {
         heroInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleHeroSubmit();
+        });
+    }
+
+    if (newTopicBtn) {
+        newTopicBtn.addEventListener('click', () => {
+            resetToHeroView();
         });
     }
 
